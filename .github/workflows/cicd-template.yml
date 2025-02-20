@@ -1,0 +1,149 @@
+name: CI/CD - Template Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        description: "Nombre del proyecto"
+        required: true
+        type: string
+      docker_image:
+        description: "Nombre de la imagen Docker"
+        required: true
+        type: string
+      working_directory:
+        description: "Directorio del proyecto"
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: self-hosted  
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: Analizar dependencias con DependencyCheck (SCA)
+        run: |
+          depcheck --data /tmp/dependency-check-data --noupdate \
+            --project "${{ inputs.project_name }}" \
+            --scan ${{ github.workspace }}/${{ inputs.working_directory }} \
+            --format JSON --out dependency-check-report.json
+        continue-on-error: true
+
+      - name: Subir reporte de DependencyCheck a DefectDojo
+        if: always()
+        run: |
+          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+            -H "Content-Type: multipart/form-data" \
+            -F "scan_type=Dependency Check Scan" \
+            -F "file=@dependency-check-report.json" \
+            -F "engagement=1"
+
+      - name: Escanear código con SpotBugs + FindSecBugs (SAST)
+        run: |
+          spotbugs -textui -effort:max -xml:withMessages \
+            -output ${{ github.workspace }}/${{ inputs.working_directory }}/target/spotbugsXml.xml \
+            ${{ github.workspace }}/${{ inputs.working_directory }}/target/classes
+
+      - name: Subir reporte de SpotBugs a DefectDojo
+        if: always()
+        run: |
+          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+            -H "Content-Type: multipart/form-data" \
+            -F "scan_type=SpotBugs Scan" \
+            -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/target/spotbugsXml.xml" \
+            -F "engagement=1"
+
+      - name: Construir la aplicación con Maven
+        run: mvn clean install -DskipTests
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+
+      - name: Construir la imagen Docker
+        run: |
+          docker build -t ${{ inputs.docker_image }} .
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+
+      - name: Escanear la imagen con Trivy
+        run: |
+          trivy image --exit-code 0 \
+            --severity CRITICAL,HIGH --format json \
+            -o trivy-report.json ${{ inputs.docker_image }}
+
+      - name: Subir reporte de Trivy a DefectDojo
+        if: always()
+        run: |
+          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+            -H "Content-Type: multipart/form-data" \
+            -F "scan_type=Trivy Scan" \
+            -F "file=@trivy-report.json" \
+            -F "engagement=1"
+
+      - name: Iniciar sesión en DockerHub
+        if: success()
+        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Subir imagen de la aplicación a DockerHub
+        if: success()
+        run: docker push ${{ inputs.docker_image }}
+
+  deploy:
+    needs: build
+    runs-on: self-hosted  
+    if: success()
+    steps:
+      - name: Verificar si la aplicación ya está en ejecución y eliminarla
+        run: |
+          if [ "$(docker ps -q -f name=${{ inputs.project_name }})" ]; then
+            docker stop ${{ inputs.project_name }} && docker rm ${{ inputs.project_name }}
+          fi
+
+      - name: Hacer pull de la imagen actualizada de la aplicación
+        run: docker pull ${{ inputs.docker_image }}
+
+      - name: Reiniciar la aplicación con la nueva imagen
+        run: |
+          docker run -d --network=spring-secured_internal_net -p 8080:8080 --name ${{ inputs.project_name }} ${{ inputs.docker_image }}
+          docker network connect external_net ${{ inputs.project_name }}
+
+      - name: Iniciar OWASP ZAP en modo daemon
+        run: |
+          zap -daemon -port 4040 -config api.disablekey=true &
+        timeout-minutes: 2  # Espera hasta 2 minutos para que ZAP esté listo
+      
+      - name: Esperar a que ZAP esté operativo
+        run: |
+          until curl -s http://localhost:4040/JSON/core/view/version/; do
+            sleep 5
+          done
+      
+      - name: Iniciar escaneo activo con OWASP ZAP
+        run: |
+          SCAN_ID=$(curl -s "http://localhost:4040/JSON/ascan/action/scan/?url=http://localhost:8081&recurse=true" | jq -r '.scan')
+          while true; do
+            STATUS=$(curl -s "http://localhost:4040/JSON/ascan/view/status/?scanId=$SCAN_ID" | jq -r '.status')
+            echo "Progreso del escaneo: $STATUS%"
+            if [ "$STATUS" -eq 100 ]; then
+              break
+            fi
+            sleep 10
+          done
+      
+      - name: Generar reporte de OWASP ZAP en JSON
+        run: |
+          curl -s "http://localhost:4040/JSON/core/view/alerts/?baseurl=http://localhost:8080" | jq '.' > zap-report.json
+
+      - name: Subir reporte de ZAP a DefectDojo
+        if: always()
+        run: |
+          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+            -H "Content-Type: multipart/form-data" \
+            -F "scan_type=ZAP Scan" \
+            -F "file=@zap-report.json" \
+            -F "engagement=1"
