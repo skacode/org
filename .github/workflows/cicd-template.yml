@@ -29,9 +29,13 @@ jobs:
         run: |
           docker network create security-net || true
 
+      - name: Detener y eliminar contenedor Dependency-Track existente
+        run: |
+          docker rm -f dependency-track-api || true
+
       - name: Iniciar Dependency-Track Server
         run: |
-          docker run -d --rm --network=security-net \
+          docker run -d --network=security-net \
             -p 8081:8080 --name dependency-track-api \
             dependencytrack/apiserver
         timeout-minutes: 3
