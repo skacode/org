@@ -27,7 +27,7 @@ jobs:
 
       - name: Crear red de Docker para herramientas de seguridad
         run: |
-          docker network create security-net || true
+          sudo -E docker network create security-net || true
 
       - name: Iniciar Dependency-Track Server
         run: |
