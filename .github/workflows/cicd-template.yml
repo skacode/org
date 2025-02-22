@@ -52,7 +52,7 @@ jobs:
         run: |
           docker run --rm --network=security-net \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
-            dependencytrack/cli \
+            dependencytrack/apiserver \
             --url http://dependency-track-api:8080 \
             --api-key ${{ secrets.DT_API_KEY }} \
             --upload \
