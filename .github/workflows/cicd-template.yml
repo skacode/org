@@ -59,15 +59,17 @@ jobs:
 
       - name: Subir SBOM a Dependency-Track
         run: |
-          SBOM_BASE64=$(base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json")
+          base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" > bom_base64.txt
           curl -X "PUT" "http://localhost:8081/api/v1/bom" \
                -H "Content-Type: application/json" \
                -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
-               -d "{
-            \"project\": \"${{ inputs.project_uuid }}\",
-            \"bom\": \"$SBOM_BASE64\"
-          }"
-
+               -d @- <<EOF
+          {
+            "project": "${{ inputs.project_uuid }}",
+            "bom": "$(cat bom_base64.txt)"
+          }
+          EOF
+          
       - name: Subir reporte de Dependency-Track a DefectDojo
         if: always()
         run: |
