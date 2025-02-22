@@ -48,17 +48,16 @@ jobs:
           done
           echo "Dependency-Track listo."
 
-      - name: Analizar dependencias con Dependency-Track (SCA)
+      - name: Subir SBOM a Dependency-Track
         run: |
-          docker run --rm --network=security-net \
-            -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
-            dependencytrack/cli \
-            --url http://localhost:8081 \
-            --api-key ${{ secrets.DT_API_KEY }} \
-            --upload \
-            --project "${{ inputs.project_name }}" \
-            --bom /workspace/bom.json
-
+          SBOM_BASE64=$(base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json")
+          curl -X "PUT" "http://localhost:8081/api/v1/bom" \
+               -H "Content-Type: application/json" \
+               -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
+               -d "{
+            \"project\": \"${{ inputs.project_uuid }}\",
+            \"bom\": \"$SBOM_BASE64\"
+          }"
 
       - name: Subir reporte de Dependency-Track a DefectDojo
         if: always()
