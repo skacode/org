@@ -48,6 +48,15 @@ jobs:
           done
           echo "Dependency-Track listo."
 
+      - name: Generar SBOM con CycloneDX (Maven)
+        run: |
+          mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+      
+      - name: Mover SBOM generado
+        run: |
+          mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
+
       - name: Subir SBOM a Dependency-Track
         run: |
           SBOM_BASE64=$(base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json")
