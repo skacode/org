@@ -52,9 +52,12 @@ jobs:
         run: |
           docker run --rm --network=security-net \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
-            openjdk:11 bash -c "\
-              curl -L -o dtrack-cli.jar https://github.com/DependencyTrack/client-java/releases/latest/download/dtrack-cli.jar && \
-              java -jar dtrack-cli.jar --url http://localhost:8081 --api-key ${{ secrets.DT_API_KEY }} --upload --project '${{ inputs.project_name }}' --bom /workspace/bom.json"
+            dependencytrack/cli \
+            --url http://localhost:8081 \
+            --api-key ${{ secrets.DT_API_KEY }} \
+            --upload \
+            --project "${{ inputs.project_name }}" \
+            --bom /workspace/bom.json
 
 
       - name: Subir reporte de Dependency-Track a DefectDojo
