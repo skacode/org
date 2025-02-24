@@ -82,6 +82,15 @@ jobs:
             -F "scan_type=Dependency Check Scan" \
             -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" \
             -F "engagement=1"
+
+      - name: Construir la aplicación con Maven
+        run: mvn clean install -DskipTests
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+
+      - name: Construir la imagen Docker
+        run: |
+          docker build -t ${{ inputs.docker_image }} .
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
         
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
@@ -98,15 +107,6 @@ jobs:
             -F "scan_type=SpotBugs Scan" \
             -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
             -F "engagement=1"
-
-      - name: Construir la aplicación con Maven
-        run: mvn clean install -DskipTests
-        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-
-      - name: Construir la imagen Docker
-        run: |
-          docker build -t ${{ inputs.docker_image }} .
-        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
 
       - name: Escanear la imagen con Trivy
         run: |
