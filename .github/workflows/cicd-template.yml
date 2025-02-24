@@ -87,7 +87,7 @@ jobs:
       - name: Subir reporte de Dependency-Track a DefectDojo
         if: always()
         run: |
-          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+          curl -X POST "http://localhost:8080/api/v2/reimport-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=Dependency Track Finding Packaging Format (FPF) Export" \
@@ -112,7 +112,7 @@ jobs:
       - name: Subir reporte de SpotBugs a DefectDojo
         if: always()
         run: |
-          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+          curl -X POST "http://localhost:8080/api/v2/reimport-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=SpotBugs Scan" \
@@ -132,7 +132,7 @@ jobs:
       - name: Subir reporte de Trivy a DefectDojo
         if: always()
         run: |
-          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+          curl -X POST "http://localhost:8080/api/v2/reimport-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=Trivy Scan" \
@@ -168,14 +168,14 @@ jobs:
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
             -t zaproxy/zap-stable zap.sh \
-            -cmd -quickurl http://localhost:8080 \
+            -cmd -quickurl http://localhost:8084 \
             -quickout /zap/work/zap-report.json \
             -quickprogress -config scanner.maxScanDurationInMins=5
 
       - name: Subir reporte de OWASP ZAP a DefectDojo
         if: always()
         run: |
-          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+          curl -X POST "http://localhost:8080/api/v2/reimport-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=ZAP Scan" \
