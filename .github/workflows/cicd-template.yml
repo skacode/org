@@ -72,12 +72,22 @@ jobs:
             --project-version "1.0" \
             --bom-path "bom.json"
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+
+      - name: Subir reporte de Dependency-Track a DefectDojo
+        if: always()
+        run: |
+          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+            -H "Content-Type: multipart/form-data" \
+            -F "scan_type=Dependency Track Finding Packaging Format (FPF)" \
+            -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" \
+            -F "engagement=1"
         
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
           docker run --rm --network=security-net \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
-            ghcr.io/spotbugs/spotbugs \
+            nemooudeis/spotbugs \
             -textui -effort:max -xml:withMessages \
             -output /workspace/spotbugsXml.xml \
             /workspace/target/classes
