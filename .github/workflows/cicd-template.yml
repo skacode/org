@@ -162,11 +162,10 @@ jobs:
       - name: Iniciar archivo Docker Compose del proyecto
         run: |
           docker compose up -d
-          docker network connect secure-net ${{ inputs.project_name }}
 
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
-          docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
+          docker run --rm -v $(pwd):/zap/work:rw \
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl http://localhost:1337 \
             -quickout /zap/work/zap-report.json \
