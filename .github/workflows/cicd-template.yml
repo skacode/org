@@ -75,6 +75,7 @@ jobs:
             "bom": "$(cat bom_base64.txt)"
           }
           EOF
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
           
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
