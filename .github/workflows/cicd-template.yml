@@ -65,12 +65,13 @@ jobs:
 
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-          dtrack-cli bom upload \
-            --url http://localhost:8081 \
+         dtrack-cli bom upload \
+            --server http://localhost:8081 \
             --api-key "${{ secrets.DT_API_KEY }}" \
-            --project "b14734f9-d02c-4c4b-a9c9-acde89553ab1" \
+            --project-name "Vulnado" \
+            --project-version "1.0" \
             --bom "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json"
- 
+        
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
           docker run --rm --network=security-net \
