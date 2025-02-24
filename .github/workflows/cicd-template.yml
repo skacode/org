@@ -70,7 +70,8 @@ jobs:
             --api-key "${{ secrets.DT_API_KEY }}" \
             --project-name "Vulnado" \
             --project-version "1.0" \
-            --bom-path "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json"
+            --bom-path "bom.json"
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
         
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
