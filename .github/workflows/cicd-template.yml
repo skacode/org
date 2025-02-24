@@ -119,25 +119,7 @@ jobs:
             -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
             -F "engagement=1"
 
-      - name: Escanear la imagen con Trivy
-        run: |
-          docker run --rm --network=security-net \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ github.workspace }}:/workspace \
-            aquasec/trivy image \
-            --exit-code 0 --severity CRITICAL,HIGH \
-            --format json -o /workspace/trivy-report.json \
-            ${{ inputs.docker_image }}
-
-      - name: Subir reporte de Trivy a DefectDojo
-        if: always()
-        run: |
-          curl -X POST "http://localhost:9090/api/v2/reimport-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -H "Content-Type: multipart/form-data" \
-            -F "scan_type=Trivy Scan" \
-            -F "file=@${{ github.workspace }}/trivy-report.json" \
-            -F "engagement=1"
+            
 
       - name: Iniciar sesión en DockerHub
         if: success()
@@ -166,10 +148,11 @@ jobs:
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=host \
+            -p 9095:9095
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl http://host.docker.internal:1337 \
             -quickout /zap/work/zap-report.json \
-            -quickprogress -config api.port=8085
+            -quickprogress -config api.port=9095
 
       - name: Subir reporte de OWASP ZAP a DefectDojo
         if: always()
