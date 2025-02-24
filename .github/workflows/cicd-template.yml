@@ -29,11 +29,17 @@ jobs:
         run: |
           docker network create security-net || true
 
-      - name: Detener y eliminar contenedor Dependency-Track existente
+      - name: Verificar si Dependency-Track API está corriendo
+        id: check_dependency_track
         run: |
-          docker rm -f dependency-track-api || true
+          if [ "$(docker ps -q -f name=dependency-track-api)" ]; then
+            echo "running=true" >> $GITHUB_ENV
+          else
+            echo "running=false" >> $GITHUB_ENV
+          fi
 
-      - name: Iniciar Dependency-Track Server
+      - name: Iniciar Dependency-Track Server si no está corriendo
+        if: env.running == 'false'
         run: |
           docker run -d --network=security-net \
             -p 8081:8080 --name dependency-track-api \
@@ -43,10 +49,8 @@ jobs:
       - name: Esperar a que Dependency-Track esté operativo
         run: |
           until curl -s http://localhost:8081/api/version; do
-            echo "Esperando a que Dependency-Track esté listo..."
             sleep 5
           done
-          echo "Dependency-Track listo."
 
       - name: Generar SBOM con CycloneDX (Maven)
         run: |
