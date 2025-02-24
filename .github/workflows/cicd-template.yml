@@ -79,7 +79,7 @@ jobs:
           curl -X POST "http://localhost:8080/api/v2/import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
-            -F "scan_type=Dependency Track Finding Packaging Format" \
+            -F "scan_type=Dependency Check Scan" \
             -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" \
             -F "engagement=1"
         
