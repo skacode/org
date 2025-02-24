@@ -63,20 +63,14 @@ jobs:
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
 
-      - name: Subir SBOM a Dependency-Track
+      - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-          base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" > bom_base64.txt
-          curl -X "PUT" "http://localhost:8081/api/v1/bom" \
-               -H "Content-Type: application/json" \
-               -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
-               -d @- <<EOF
-          {
-            "project": "b14734f9-d02c-4c4b-a9c9-acde89553ab1",
-            "bom": "$(cat bom_base64.txt)"
-          }
-          EOF
-        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-          
+          dtrack bom upload \
+            --url http://localhost:8081 \
+            --api-key "${{ secrets.DT_API_KEY }}" \
+            --project "b14734f9-d02c-4c4b-a9c9-acde89553ab1" \
+            --bom "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json"
+ 
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
           docker run --rm --network=security-net \
