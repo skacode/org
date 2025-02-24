@@ -69,7 +69,7 @@ jobs:
                -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
                -d @- <<EOF
           {
-            "project": "${{ inputs.project_uuid }}",
+            "project": "${{ secrets.VULNADO_UUID }}",
             "bom": "$(cat bom_base64.txt)"
           }
           EOF
