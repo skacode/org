@@ -159,17 +159,8 @@ jobs:
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}
 
-      - name: Iniciar base de datos PostgreSQL para el proyecto
-        run: |
-          docker run -d --network=secure-net --name ${{ inputs.project_name }}-db \
-            -e POSTGRES_USER=${{ inputs.project_name }} \
-            -e POSTGRES_PASSWORD=${{ inputs.project_name }} \
-            -e POSTGRES_DB=${{ inputs.project_name }} \
-            postgres:latest
-
-      - name: Reiniciar la aplicación con la nueva imagen en la red
-        run: |
-          docker run -d --network=secure-net -p 8084:8080 --name ${{ inputs.project_name }} ${{ inputs.docker_image }}
+      - name: Iniciar archivo Docker Compose del proyecto
+        run: docker compose up -d
 
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
