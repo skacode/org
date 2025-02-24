@@ -65,63 +65,17 @@ jobs:
 
       - name: Subir SBOM a Dependency-Track
         run: |
-          # Instalar jq si no está presente
-          sudo apt-get update && sudo apt-get install -y jq
-
-          # Subir el SBOM y capturar el token de procesamiento
-          RESPONSE=$(curl -s -X "PUT" "http://localhost:8081/api/v1/bom" \
-            -H "Content-Type: application/json" \
-            -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
-            -d @- <<EOF
+          base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" > bom_base64.txt
+          curl -X "PUT" "http://localhost:8081/api/v1/bom" \
+               -H "Content-Type: application/json" \
+               -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
+               -d @- <<EOF
           {
-            "project": "${{ secrets.VULNADO_UUID }}",
-            "bom": "$(base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json")"
+            "project": "b14734f9-d02c-4c4b-a9c9-acde89553ab1",
+            "bom": "$(cat bom_base64.txt)"
           }
           EOF
-          )
-
-          # Imprimir la respuesta completa para depuración
-          echo "Respuesta de Dependency-Track:"
-          echo "$RESPONSE"
-
-          # Extraer el token de la respuesta
-          TOKEN=$(echo "$RESPONSE" | jq -r '.token')
-
-          # Validar si se obtuvo un token
-          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
-            echo "Error: No se obtuvo un token de procesamiento del SBOM."
-            exit 1
-          fi
-
-          echo "Token obtenido: $TOKEN"
-
-          echo "Esperando a que Dependency-Track procese el SBOM..."
-          STATUS="pending"
-          while [ "$STATUS" != "processed" ]; do
-              RESPONSE=$(curl -s -X GET "http://localhost:8081/api/v1/bom/token/$TOKEN" \
-                   -H "X-API-Key: ${{ secrets.DT_API_KEY }}")
-
-              echo "Respuesta de estado del procesamiento:"
-              echo "$RESPONSE"
-
-              STATUS=$(echo "$RESPONSE" | jq -r '.processingStatus')
-
-              if [ "$STATUS" == "failed" ]; then
-                  echo "Error: Dependency-Track no pudo procesar el SBOM"
-                  exit 1
-              fi
-
-              if [ -z "$STATUS" ] || [ "$STATUS" == "null" ]; then
-                  echo "Error: No se recibió un estado válido del procesamiento."
-                  exit 1
-              fi
-
-              echo "Estado actual: $STATUS"
-              sleep 10
-          done
-          echo "SBOM procesado correctamente."
-
-
+          
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
           docker run --rm --network=security-net \
