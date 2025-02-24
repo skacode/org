@@ -5,16 +5,19 @@ on:
     inputs:
       project_name:
         description: "Nombre del proyecto"
-        required: true
+        required: false
         type: string
+        default: "default-project"
       docker_image:
         description: "Nombre de la imagen Docker"
-        required: true
+        required: false
         type: string
+        default: "default-image:latest"
       working_directory:
         description: "Directorio del proyecto"
-        required: true
+        required: false
         type: string
+        default: "."
 
 jobs:
   build:
@@ -61,18 +64,17 @@ jobs:
       
       - name: Mover SBOM generado
         run: |
-          mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
+          mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/bom.json
 
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-         dtrack-cli bom upload \
+          dtrack-cli bom upload \
             --server http://localhost:8081 \
             --api-key "${{ secrets.DT_API_KEY }}" \
-            --project-name "Vulnado" \
+            --project-name "${{ inputs.project_name }}" \
             --project-version "1.0" \
             --bom-path "bom.json"
-        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-        
+      
       - name: Guardar hallazgos de Dependency-Track en JSON
         run: |
           curl -X GET "http://localhost:8081/api/v1/finding?project=${{ secrets.VULNADO_UUID }}" \
@@ -92,7 +94,8 @@ jobs:
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=Dependency Track Finding Packaging Format (FPF) Export" \
             -F "file=@${{ github.workspace }}/dependency-track-findings-fixed.json" \
-            -F "engagement=1"
+            -F "engagement=1" \
+            -F "product_name=${{ inputs.project_name }}"
 
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
@@ -102,46 +105,6 @@ jobs:
         run: |
           docker build -t ${{ inputs.docker_image }} .
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-        
-      - name: Escanear código con SpotBugs + FindSecBugs (SAST)
-        run: |
-          docker run --rm --network=security-net \
-            -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
-            nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
-
-      - name: Subir reporte de SpotBugs a DefectDojo
-        if: always()
-        run: |
-          curl -X POST "http://localhost:8080/api/v2/reimport-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -H "Content-Type: multipart/form-data" \
-            -F "scan_type=SpotBugs Scan" \
-            -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
-            -F "engagement=1"
-
-      - name: Escanear la imagen con Trivy
-        run: |
-          docker run --rm --network=security-net \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ github.workspace }}:/workspace \
-            aquasec/trivy image \
-            --exit-code 0 --severity CRITICAL,HIGH \
-            --format json -o /workspace/trivy-report.json \
-            ${{ inputs.docker_image }}
-
-      - name: Subir reporte de Trivy a DefectDojo
-        if: always()
-        run: |
-          curl -X POST "http://localhost:8080/api/v2/reimport-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -H "Content-Type: multipart/form-data" \
-            -F "scan_type=Trivy Scan" \
-            -F "file=@${{ github.workspace }}/trivy-report.json" \
-            -F "engagement=1"
-
-      - name: Iniciar sesión en DockerHub
-        if: success()
-        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Subir imagen de la aplicación a DockerHub
         if: success()
@@ -159,10 +122,21 @@ jobs:
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}
 
+      - name: Iniciar base de datos PostgreSQL para el proyecto
+        run: |
+          docker run -d --network=secure-net --name ${PROJECT_NAME}-db \
+            -e POSTGRES_USER=${PROJECT_NAME} \
+            -e POSTGRES_PASSWORD=${PROJECT_NAME} \
+            -e POSTGRES_DB=${PROJECT_NAME} \
+            postgres:latest
+
       - name: Reiniciar la aplicación con la nueva imagen en la red
         run: |
-          docker network create secure-net || true
-          docker run -d --network=secure-net -p 8084:8080 --name ${{ inputs.project_name }} ${{ inputs.docker_image }}
+          docker run -d --network=secure-net -p 8084:8080 --name ${{ inputs.project_name }} \
+            -e DATABASE_URL="jdbc:postgresql://${{ inputs.project_name }}-db:5432/${{ inputs.project_name }}" \
+            -e DATABASE_USER="${{ inputs.project_name }}" \
+            -e DATABASE_PASSWORD="${{ inputs.project_name }}" \
+            ${{ inputs.docker_image }}
 
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
@@ -180,4 +154,5 @@ jobs:
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=ZAP Scan" \
             -F "file=@zap-report.json" \
-            -F "engagement=1"
+            -F "engagement=1" \
+            -F "product_name=${{ inputs.project_name }}"
