@@ -78,6 +78,11 @@ jobs:
           curl -X GET "http://localhost:8081/api/v1/finding?project=b14734f9-d02c-4c4b-a9c9-acde89553ab1" \
             -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
             -o ${{ github.workspace }}/dependency-track-findings.json
+            
+      - name: Transformar el JSON al formato correcto para DefectDojo
+        run: |
+          cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
+            > ${{ github.workspace }}/dependency-track-findings-fixed.json
 
       - name: Subir reporte de Dependency-Track a DefectDojo
         if: always()
@@ -86,7 +91,7 @@ jobs:
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=Dependency Track Finding Packaging Format (FPF) Export" \
-            -F "file=@${{ github.workspace }}/dependency-track-findings.json" \
+            -F "file=@${{ github.workspace }}/dependency-track-findings-fixed.json" \
             -F "engagement=1"
 
       - name: Construir la aplicación con Maven
