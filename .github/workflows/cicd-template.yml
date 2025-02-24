@@ -75,7 +75,7 @@ jobs:
         
       - name: Guardar hallazgos de Dependency-Track en JSON
         run: |
-          curl -X GET "http://localhost:8081/api/v1/finding?project=b14734f9-d02c-4c4b-a9c9-acde89553ab1" \
+          curl -X GET "http://localhost:8081/api/v1/finding?project=${{ secrets.VULNADO_UUID }}" \
             -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
             -o ${{ github.workspace }}/dependency-track-findings.json
             
@@ -125,6 +125,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
             aquasec/trivy image \
+            --skip-update \
             --exit-code 0 --severity CRITICAL,HIGH \
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
@@ -161,12 +162,12 @@ jobs:
 
       - name: Reiniciar la aplicación con la nueva imagen en la red
         run: |
-          docker network create app-net || true
-          docker run -d --network=app-net -p 8080:8080 --name ${{ inputs.project_name }} ${{ inputs.docker_image }}
+          docker network create secure-net || true
+          docker run -d --network=secure-net -p 8084:8080 --name ${{ inputs.project_name }} ${{ inputs.docker_image }}
 
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
-          docker run --rm -v $(pwd):/zap/work:rw --network=app-net \
+          docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl http://localhost:8080 \
             -quickout /zap/work/zap-report.json \
