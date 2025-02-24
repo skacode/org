@@ -49,8 +49,10 @@ jobs:
       - name: Esperar a que Dependency-Track esté operativo
         run: |
           until curl -s http://localhost:8081/api/version; do
+            echo "Esperando a que Dependency-Track esté listo..."
             sleep 5
           done
+          echo "Dependency-Track listo."
 
       - name: Generar SBOM con CycloneDX (Maven)
         run: |
@@ -63,16 +65,32 @@ jobs:
 
       - name: Subir SBOM a Dependency-Track
         run: |
-          base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" > bom_base64.txt
-          curl -X "PUT" "http://localhost:8081/api/v1/bom" \
-               -H "Content-Type: application/json" \
-               -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
-               -d @- <<EOF
+          TOKEN=$(curl -X "PUT" "http://localhost:8081/api/v1/bom" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
+            -d @- <<EOF | jq -r '.token'
           {
             "project": "${{ secrets.VULNADO_UUID }}",
-            "bom": "$(cat bom_base64.txt)"
+            "bom": "$(base64 -w 0 "${{ github.workspace }}/${{ inputs.working_directory }}/bom.json")"
           }
           EOF
+          )
+
+          echo "Esperando a que Dependency-Track procese el SBOM..."
+          STATUS="pending"
+          while [ "$STATUS" != "processed" ]; do
+              STATUS=$(curl -s -X GET "http://localhost:8081/api/v1/bom/token/$TOKEN" \
+                   -H "X-API-Key: ${{ secrets.DT_API_KEY }}" | jq -r '.processingStatus')
+
+              if [ "$STATUS" == "failed" ]; then
+                  echo "Error: Dependency-Track no pudo procesar el SBOM"
+                  exit 1
+              fi
+
+              echo "Estado actual: $STATUS"
+              sleep 10
+          done
+          echo "SBOM procesado correctamente."
 
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
