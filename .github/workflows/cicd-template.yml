@@ -92,7 +92,7 @@ jobs:
       - name: Subir reporte de SpotBugs a DefectDojo
         if: always()
         run: |
-          curl -X POST "http://localhost:8080/api/v2/import-scan/" \
+          sudo curl -X POST "http://localhost:8080/api/v2/import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=SpotBugs Scan" \
