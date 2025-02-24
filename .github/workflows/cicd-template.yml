@@ -160,7 +160,9 @@ jobs:
         run: docker pull ${{ inputs.docker_image }}
 
       - name: Iniciar archivo Docker Compose del proyecto
-        run: docker compose up -d
+        run: |
+          docker compose up -d
+          docker network connect secure-net ${{ inputs.project_name }}
 
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
