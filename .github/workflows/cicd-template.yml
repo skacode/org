@@ -149,7 +149,6 @@ jobs:
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=host \
             -t zaproxy/zap-stable zap.sh \
-            -daemon \
             -cmd -quickurl http://host.docker.internal:1337 \
             -quickout /zap/work/zap-report.json \
             -quickprogress -config api.disableProxy=true
