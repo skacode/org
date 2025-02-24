@@ -65,7 +65,7 @@ jobs:
 
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-          dtrack bom upload \
+          dtrack-cli bom upload \
             --url http://localhost:8081 \
             --api-key "${{ secrets.DT_API_KEY }}" \
             --project "b14734f9-d02c-4c4b-a9c9-acde89553ab1" \
