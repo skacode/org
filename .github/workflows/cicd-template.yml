@@ -148,7 +148,7 @@ jobs:
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=host \
-            -p 9095:9095
+            -p 9095:9095 \
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl http://host.docker.internal:1337 \
             -quickout /zap/work/zap-report.json \
