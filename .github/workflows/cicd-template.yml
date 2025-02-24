@@ -72,6 +72,12 @@ jobs:
             --project-version "1.0" \
             --bom-path "bom.json"
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+        
+      - name: Guardar hallazgos de Dependency-Track en JSON
+        run: |
+          curl -X GET "http://localhost:8081/api/v1/finding?project=b14734f9-d02c-4c4b-a9c9-acde89553ab1" \
+            -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
+            -o ${{ github.workspace }}/dependency-track-findings.json
 
       - name: Subir reporte de Dependency-Track a DefectDojo
         if: always()
@@ -80,7 +86,7 @@ jobs:
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=Dependency Track Finding Packaging Format (FPF) Export" \
-            -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/bom.json" \
+            -F "file=@${{ github.workspace }}/dependency-track-findings.json" \
             -F "engagement=1"
 
       - name: Construir la aplicación con Maven
