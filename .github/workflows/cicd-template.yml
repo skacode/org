@@ -145,11 +145,17 @@ jobs:
         run: |
           docker compose up -d
 
+      - name: Conectar todos los contenedores del proyecto a la red `secure-net`
+        run: |
+          for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
+            docker network connect secure-net "$container" || true
+          done
+
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
             -t zaproxy/zap-stable zap.sh \
-            -cmd -quickurl http://172.22.0.5:8080 \
+            -cmd -quickurl http://vulnado-client-1:1337 \
             -quickout /zap/work/zap-report.json \
             -quickprogress -config scanner.maxScanDurationInMins=5
 
