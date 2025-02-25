@@ -168,7 +168,7 @@ jobs:
             --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl ${{ inputs.app_url }} \
-            -quickout /zap/work/zap-report.json \
+            -quickout /zap/work/zap-report.xml \
             -quickprogress \
             -config scanner.maxScanDurationInMins=2 \
             -config failOnError=true \
