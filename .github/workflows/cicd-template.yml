@@ -149,9 +149,9 @@ jobs:
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
             -t zaproxy/zap-stable zap.sh \
-            -cmd -quickurl http://host.docker.internal:1337 \
+            -cmd -quickurl http://172.22.0.5:8080 \
             -quickout /zap/work/zap-report.json \
-            -quickprogress -config api.disableProxy=true
+            -quickprogress -config scanner.maxScanDurationInMins=5
 
       - name: Subir reporte de OWASP ZAP a DefectDojo
         if: always()
@@ -161,5 +161,5 @@ jobs:
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=ZAP Scan" \
             -F "file=@zap-report.json" \
-            -F "engagement=1" \
-            -F "product_name=${{ inputs.project_name }}"
+            -F "product_name=${{ inputs.project_name }}" \
+            -F "engagement=1"
