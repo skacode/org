@@ -95,6 +95,11 @@ jobs:
       - name: Mover SBOM generado
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
+     
+      - name: Checkout para reusable workflow
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
  
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
