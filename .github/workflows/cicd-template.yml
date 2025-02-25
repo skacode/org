@@ -181,5 +181,5 @@ jobs:
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=ZAP Scan" \
-            -F "file=@zap-report.xml" \
+            -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml" \
             -F "engagement=1"
