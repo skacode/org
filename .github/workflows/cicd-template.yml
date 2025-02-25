@@ -155,7 +155,7 @@ jobs:
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
             -t zaproxy/zap-stable zap.sh \
-            -cmd -quickurl http://vulnado-client-1:1337 \
+            -cmd -quickurl http://vulnado-client-1:80 \
             -quickout /zap/work/zap-report.json \
             -quickprogress -config scanner.maxScanDurationInMins=5
 
