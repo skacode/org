@@ -98,13 +98,13 @@ jobs:
  
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
-        uses: ./.github/workflows/uploadtodojo.yml
-        with:
-          scan_type: "Dependency Track Finding Packaging Format (FPF) Export"
-          file_path: "${{ github.workspace }}/dependency-track-findings-fixed.json"
-          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
-          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
-            
+        run: |
+          python ./.github/workflows/uploadtodojo.py \
+            --scan_type "Dependency Track Finding Packaging Format (FPF) Export" \
+            --file_path "${{ github.workspace }}/dependency-track-findings-fixed.json" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+
   ScanSpotbugs:
     needs: ScanDependencyTrack
     runs-on: self-hosted  
@@ -128,16 +128,16 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
             nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
- 
-      - name: Upload SpotBugs Report to DefectDojo
+      
+      - name: Upload SpotBugs Report a DefectDojo
         if: success()
-        uses: ./.github/workflows/uploadtodojo.yml
-        with:
-          scan_type: "SpotBugs Scan"
-          file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml"
-          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
-          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
-            
+        run: |
+          python ./.github/workflows/uploadtodojo.py \
+            --scan_type "SpotBugs Scan" \
+            --file_path "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+
   ScanTrivy:
     needs: ScanSpotbugs
     runs-on: self-hosted  
@@ -159,12 +159,12 @@ jobs:
  
       - name: Upload Trivy Report to DefectDojo
         if: success()
-        uses: ./.github/workflows/uploadtodojo.yml
-        with:
-          scan_type: "Trivy Scan"
-          file_path: "${{ github.workspace }}/trivy-report.json"
-          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
-          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
+        run: |
+          python ./.github/workflows/uploadtodojo.py \
+            --scan_type "Trivy Scan" \
+            --file_path "${{ github.workspace }}/trivy-report.json" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
  
       - name: Iniciar sesión en DockerHub
         if: success()
@@ -191,7 +191,7 @@ jobs:
  
       - name: Iniciar archivo Docker Compose del proyecto
         env:
-          POSTGRES_VERSION: "13.3"  # Define aquí la versión fija de Postgres
+          POSTGRES_VERSION: "13.3"
         run: |
           docker compose up -d
           
@@ -217,12 +217,12 @@ jobs:
             -config scanner.maxScanDurationInMins=2 \
             -config failOnError=true \
             -config rules.common.requestDelay=200
- 
+            
       - name: Upload OWASP ZAP Report to DefectDojo
         if: success()
-        uses: ./.github/workflows/uploadtodojo.yml
-        with:
-          scan_type: "ZAP Scan"
-          file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml"
-          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
-          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
+        run: |
+          python ./.github/workflows/uploadtodojo.py \
+            --scan_type "ZAP Scan" \
+            --file_path "${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
