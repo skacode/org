@@ -22,7 +22,7 @@ on:
 
 jobs:
   setup-defectdojo:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       product_id: ${{ steps.setup.outputs.product_id }}
       engagement_id: ${{ steps.setup.outputs.engagement_id }}
