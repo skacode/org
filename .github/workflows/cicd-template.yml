@@ -40,7 +40,7 @@ jobs:
 
       - name: Ejecutar script de DefectDojo
         id: setup
-        run: python setupdefectdojo.py
+        run: python .github/workflows/setupdefectdojo.py
         env:
           INPUT_PROJECT_NAME: ${{ inputs.project_name }}
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
