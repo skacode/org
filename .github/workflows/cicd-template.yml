@@ -1,5 +1,5 @@
 name: CI/CD - Security Pipeline with SpotBugs, Dependency Track, Trivy and ZAP.
-
+ 
 on:
   workflow_call:
     inputs:
@@ -19,7 +19,7 @@ on:
         description: "Url de la aplicación"
         required: True
         type: string
-
+ 
 jobs:
   build:
     runs-on: self-hosted  
@@ -27,12 +27,11 @@ jobs:
       - name: Clonar el repositorio
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
-
+          fetch-depth: 0
+ 
       - name: Crear red de Docker para herramientas de seguridad
         run: |
           docker network create security-net || true
-    
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
@@ -41,7 +40,6 @@ jobs:
           else
             echo "running=false" >> $GITHUB_ENV
           fi
-      
       - name: Iniciar Dependency-Track si está detenido o crear si no existe
         if: env.running == 'false'
         run: |
@@ -52,7 +50,7 @@ jobs:
               -p 8081:8080 --name dependency-track-api \
               dependencytrack/apiserver
           fi
-
+ 
       - name: Esperar a que Dependency-Track esté operativo
         run: |
           until curl -s http://localhost:8081/api/version; do
@@ -60,16 +58,15 @@ jobs:
             sleep 5
           done
           echo "Dependency-Track listo."
-
+ 
       - name: Generar SBOM con CycloneDX (Maven)
         run: |
           mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-      
       - name: Mover SBOM generado
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
-
+ 
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
          dtrack-cli bom upload \
@@ -79,18 +76,16 @@ jobs:
             --project-version "1.0" \
             --bom-path "bom.json"
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-        
       - name: Guardar hallazgos de Dependency-Track en JSON
         run: |
           curl -X GET "http://localhost:8081/api/v1/finding?project=${{ inputs.project_name }}" \
             -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
             -o ${{ github.workspace }}/dependency-track-findings.json
-            
       - name: Transformar el JSON al formato correcto para DefectDojo
         run: |
           cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
-            > ${{ github.workspace }}/dependency-track-findings-fixed.json
-
+> ${{ github.workspace }}/dependency-track-findings-fixed.json
+ 
       - name: Subir reporte de Dependency-Track a DefectDojo
         if: always()
         run: |
@@ -100,22 +95,21 @@ jobs:
             -F "scan_type=Dependency Track Finding Packaging Format (FPF) Export" \
             -F "file=@${{ github.workspace }}/dependency-track-findings-fixed.json" \
             -F "engagement=1"
-
+ 
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-
+ 
       - name: Construir la imagen Docker
         run: |
           docker build -t ${{ inputs.docker_image }} .
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-        
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
           docker run --rm --network=security-net \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
             nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
-
+ 
       - name: Subir reporte de SpotBugs a DefectDojo
         if: always()
         run: |
@@ -125,17 +119,17 @@ jobs:
             -F "scan_type=SpotBugs Scan" \
             -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
             -F "engagement=1"
-
+ 
             
-
+ 
       - name: Iniciar sesión en DockerHub
         if: success()
         run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-
+ 
       - name: Subir imagen de la aplicación a DockerHub
         if: success()
         run: docker push ${{ inputs.docker_image }}
-
+ 
   deploy:
     needs: build
     runs-on: self-hosted  
@@ -144,26 +138,25 @@ jobs:
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
           docker rm -f ${{ inputs.project_name }} || true
-
+ 
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}
-
+ 
       - name: Iniciar archivo Docker Compose del proyecto
         run: |
           docker compose up -d
-
+ 
       - name: Conectar todos los contenedores del proyecto a la red `secure-net`
         run: |
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
             docker network connect secure-net "$container" || true
           done
-          
       - name: Limitar recursos de los contenedores en ejecución
         run: |
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
             docker update --memory=512m --memory-swap=1g --cpus=0.5 "$container"
           done
-
+ 
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
@@ -174,12 +167,12 @@ jobs:
             -quickprogress \
             -config scanner.maxScanDurationInMins=2 \
             -config failOnError=true \
-            -config rules.common.requestDelay=200 
-
+            -config rules.common.requestDelay=200
+ 
       - name: Subir reporte de OWASP ZAP a DefectDojo
         if: always()
         run: |
-          curl -X POST "http://localhost:9090/api/v2/reimport-scan/" \
+          curl -X POST "http://localhost:9090/api/v2/import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=ZAP Scan" \
