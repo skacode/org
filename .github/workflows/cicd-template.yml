@@ -21,7 +21,7 @@ on:
         type: string
 
 jobs:
-  setup-defectdojo:
+  SetupDefectDojo:
     runs-on: self-hosted
     outputs:
       product_id: ${{ steps.setup.outputs.product_id }}
@@ -50,18 +50,14 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           API_URL: "http://localhost:9090/api/v2"
           
-  build:
-    needs: setup-defectdojo
+  ScanDependencyTrack:
+    needs: SetupDefectDojo
     runs-on: self-hosted  
     steps:
       - name: Clonar el repositorio
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
- 
-      - name: Crear red de Docker para herramientas de seguridad
-        run: |
-          docker network create security-net || true
           
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
@@ -78,7 +74,7 @@ jobs:
           if [ "$(docker ps -aq -f name=dependency-track-api)" ]; then
             docker start dependency-track-api
           else
-            docker run -d --network=security-net \
+            docker run -d \
               -p 8081:8080 --name dependency-track-api \
               dependencytrack/apiserver
           fi
@@ -100,37 +96,24 @@ jobs:
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
  
-      - name: Subir SBOM a Dependency-Track con dtrack CLI
-        run: |
-         dtrack-cli bom upload \
-            --server http://localhost:8081 \
-            --api-key "${{ secrets.DT_API_KEY }}" \
-            --project-name "${{ inputs.project_name }}" \
-            --project-version "1.0" \
-            --bom-path "bom.json"
-        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-        
-      - name: Guardar hallazgos de Dependency-Track en JSON
-        run: |
-          curl -X GET "http://localhost:8081/api/v1/finding?project=${{ inputs.project_name }}" \
-            -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
-            -o ${{ github.workspace }}/dependency-track-findings.json
+      - name: Upload Dependency-Track Report a DefectDojo
+        if: success()
+        uses: ./.github/workflows/uploadtodojo.yml
+        with:
+          scan_type: "Dependency Track Finding Packaging Format (FPF) Export"
+          file_path: "${{ github.workspace }}/dependency-track-findings-fixed.json"
+          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
+          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
             
-      - name: Transformar el JSON al formato correcto para DefectDojo
-        run: |
-          cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
-            > ${{ github.workspace }}/dependency-track-findings-fixed.json
- 
-      - name: Subir reporte de Dependency-Track a DefectDojo
-        if: always()
-        run: |
-          curl -X POST "http://localhost:9090/api/v2/reimport-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -H "Content-Type: multipart/form-data" \
-            -F "scan_type=Dependency Track Finding Packaging Format (FPF) Export" \
-            -F "file=@${{ github.workspace }}/dependency-track-findings-fixed.json" \
-            -F "engagement=1"
- 
+  ScanSpotbugs:
+    needs: ScanDependencyTrack
+    runs-on: self-hosted  
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
@@ -142,23 +125,31 @@ jobs:
         
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
-          docker run --rm --network=security-net \
+          docker run --rm \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
             nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
  
-      - name: Subir reporte de SpotBugs a DefectDojo
-        if: always()
-        run: |
-          curl -X POST "http://localhost:9090/api/v2/reimport-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -H "Content-Type: multipart/form-data" \
-            -F "scan_type=SpotBugs Scan" \
-            -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
-            -F "engagement=1"
+      - name: Upload SpotBugs Report to DefectDojo
+        if: success()
+        uses: ./.github/workflows/uploadtodojo.yml
+        with:
+          scan_type: "SpotBugs Scan"
+          file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml"
+          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
+          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
+            
+  ScanTrivy:
+    needs: ScanSpotbugs
+    runs-on: self-hosted  
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
             
       - name: Escanear la imagen con Trivy
         run: |
-          docker run --rm --network=security-net \
+          docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
             aquasec/trivy image \
@@ -166,15 +157,14 @@ jobs:
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
  
-      - name: Subir reporte de Trivy a DefectDojo
-        if: always()
-        run: |
-          curl -X POST "http://localhost:9090/api/v2/reimport-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -H "Content-Type: multipart/form-data" \
-            -F "scan_type=Trivy Scan" \
-            -F "file=@${{ github.workspace }}/trivy-report.json" \
-            -F "engagement=1"
+      - name: Upload Trivy Report to DefectDojo
+        if: success()
+        uses: ./.github/workflows/uploadtodojo.yml
+        with:
+          scan_type: "Trivy Scan"
+          file_path: "${{ github.workspace }}/trivy-report.json"
+          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
+          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
  
       - name: Iniciar sesión en DockerHub
         if: success()
@@ -185,7 +175,7 @@ jobs:
         run: docker push ${{ inputs.docker_image }}
  
   deploy:
-    needs: build
+    needs: ScanTrivy
     runs-on: self-hosted  
     if: success()
     steps:
@@ -195,26 +185,30 @@ jobs:
  
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}
+
+      - name: Borrar caché de imagen docker
+        run: docker image prune -af
  
       - name: Iniciar archivo Docker Compose del proyecto
+        env:
+          POSTGRES_VERSION: "13.3"  # Define aquí la versión fija de Postgres
         run: |
           docker compose up -d
- 
-      - name: Conectar todos los contenedores del proyecto a la red `secure-net`
-        run: |
-          for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
-            docker network connect secure-net "$container" || true
-          done
           
       - name: Limitar recursos de los contenedores en ejecución
         run: |
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
             docker update --memory=512m --memory-swap=1g --cpus=0.5 "$container"
           done
- 
+
+  ScanZap:
+    needs: deploy
+    runs-on: self-hosted  
+    if: success()
+    steps:
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
-          docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
+          docker run --rm -v $(pwd):/zap/work:rw \
             --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl ${{ inputs.app_url }} \
@@ -224,12 +218,11 @@ jobs:
             -config failOnError=true \
             -config rules.common.requestDelay=200
  
-      - name: Subir reporte de OWASP ZAP a DefectDojo
-        if: always()
-        run: |
-          curl -X POST "http://localhost:9090/api/v2/reimport-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -H "Content-Type: multipart/form-data" \
-            -F "scan_type=ZAP Scan" \
-            -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml" \
-            -F "engagement=1"
+      - name: Upload OWASP ZAP Report to DefectDojo
+        if: success()
+        uses: ./.github/workflows/uploadtodojo.yml
+        with:
+          scan_type: "ZAP Scan"
+          file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml"
+          product_id: ${{ needs.SetupDefectDojo.outputs.product_id }}
+          engagement_id: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
