@@ -1,4 +1,4 @@
-name: CI/CD - Dockerized Security Pipeline
+name: CI/CD - Security Pipeline with SpotBugs, Dependency Track, Trivy and ZAP.
 
 on:
   workflow_call:
@@ -14,6 +14,10 @@ on:
       working_directory:
         description: "Directorio del proyecto"
         required: true
+        type: string
+      app_url:
+        description: "Url de la aplicación"
+        required: True
         type: string
 
 jobs:
@@ -165,7 +169,7 @@ jobs:
           docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
             --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap.sh \
-            -cmd -quickurl http://vulnado-client-1:80 \
+            -cmd -quickurl ${{ inputs.app_url }} \
             -quickout /zap/work/zap-report.json \
             -quickprogress \
             -config scanner.maxScanDurationInMins=2 \
@@ -180,5 +184,4 @@ jobs:
             -H "Content-Type: multipart/form-data" \
             -F "scan_type=ZAP Scan" \
             -F "file=@zap-report.json" \
-            -F "product_name=${{ inputs.project_name }}" \
             -F "engagement=1"
