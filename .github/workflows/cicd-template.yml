@@ -157,7 +157,10 @@ jobs:
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl http://vulnado-client-1:80 \
             -quickout /zap/work/zap-report.json \
-            -quickprogress -config scanner.maxScanDurationInMins=5
+            -quickprogress \
+            -config scanner.maxScanDurationInMins=2 \
+            -config failOnError=true \
+            -config rules.common.requestDelay=200 
 
       - name: Subir reporte de OWASP ZAP a DefectDojo
         if: always()
