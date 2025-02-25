@@ -1,5 +1,5 @@
-name: CI/CD - Security Pipeline with SpotBugs, Dependency Track, Trivy and ZAP.
- 
+name: CI/CD - Security Pipeline with SpotBugs, Dependency Track, Trivy y ZAP
+
 on:
   workflow_call:
     inputs:
@@ -16,12 +16,38 @@ on:
         required: true
         type: string
       app_url:
-        description: "Url de la aplicación"
-        required: True
+        description: "URL de la aplicación"
+        required: true
         type: string
- 
+
 jobs:
+  setup-defectdojo:
+    runs-on: ubuntu-latest
+    outputs:
+      product_id: ${{ steps.setup.outputs.product_id }}
+      engagement_id: ${{ steps.setup.outputs.engagement_id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.2'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Ejecutar script de DefectDojo
+        id: setup
+        run: python setupdefectdojo.py
+        env:
+          INPUT_PROJECT_NAME: ${{ inputs.project_name }}
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          API_URL: "http://localhost:9090/api/v2"
+          
   build:
+    needs: setup-defectdojo
     runs-on: self-hosted  
     steps:
       - name: Clonar el repositorio
