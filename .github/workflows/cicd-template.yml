@@ -28,7 +28,7 @@ jobs:
       - name: Crear red de Docker para herramientas de seguridad
         run: |
           docker network create security-net || true
-
+    
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
@@ -37,14 +37,17 @@ jobs:
           else
             echo "running=false" >> $GITHUB_ENV
           fi
-
-      - name: Iniciar Dependency-Track Server si no está corriendo
+      
+      - name: Iniciar Dependency-Track si está detenido o crear si no existe
         if: env.running == 'false'
         run: |
-          docker run -d --network=security-net \
-            -p 8081:8080 --name dependency-track-api \
-            dependencytrack/apiserver
-        timeout-minutes: 3
+          if [ "$(docker ps -aq -f name=dependency-track-api)" ]; then
+            docker start dependency-track-api
+          else
+            docker run -d --network=security-net \
+              -p 8081:8080 --name dependency-track-api \
+              dependencytrack/apiserver
+          fi
 
       - name: Esperar a que Dependency-Track esté operativo
         run: |
@@ -150,10 +153,17 @@ jobs:
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
             docker network connect secure-net "$container" || true
           done
+          
+      - name: Limitar recursos de los contenedores en ejecución
+        run: |
+          for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
+            docker update --memory=512m --memory-swap=1g --cpus=0.5 "$container"
+          done
 
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
           docker run --rm -v $(pwd):/zap/work:rw --network=secure-net \
+            --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap.sh \
             -cmd -quickurl http://vulnado-client-1:80 \
             -quickout /zap/work/zap-report.json \
