@@ -32,6 +32,7 @@ jobs:
       - name: Crear red de Docker para herramientas de seguridad
         run: |
           docker network create security-net || true
+          
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
@@ -40,6 +41,7 @@ jobs:
           else
             echo "running=false" >> $GITHUB_ENV
           fi
+          
       - name: Iniciar Dependency-Track si está detenido o crear si no existe
         if: env.running == 'false'
         run: |
@@ -63,6 +65,7 @@ jobs:
         run: |
           mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+        
       - name: Mover SBOM generado
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
@@ -76,15 +79,17 @@ jobs:
             --project-version "1.0" \
             --bom-path "bom.json"
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+        
       - name: Guardar hallazgos de Dependency-Track en JSON
         run: |
           curl -X GET "http://localhost:8081/api/v1/finding?project=${{ inputs.project_name }}" \
             -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
             -o ${{ github.workspace }}/dependency-track-findings.json
+            
       - name: Transformar el JSON al formato correcto para DefectDojo
         run: |
           cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
-> ${{ github.workspace }}/dependency-track-findings-fixed.json
+            > ${{ github.workspace }}/dependency-track-findings-fixed.json
  
       - name: Subir reporte de Dependency-Track a DefectDojo
         if: always()
@@ -104,6 +109,7 @@ jobs:
         run: |
           docker build -t ${{ inputs.docker_image }} .
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+        
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
           docker run --rm --network=security-net \
@@ -119,8 +125,6 @@ jobs:
             -F "scan_type=SpotBugs Scan" \
             -F "file=@${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
             -F "engagement=1"
- 
-            
  
       - name: Iniciar sesión en DockerHub
         if: success()
@@ -151,6 +155,7 @@ jobs:
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
             docker network connect secure-net "$container" || true
           done
+          
       - name: Limitar recursos de los contenedores en ejecución
         run: |
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
