@@ -206,6 +206,11 @@ jobs:
     runs-on: self-hosted  
     if: success()
     steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v3
+        with:
+          ref: master
+
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
           docker rm -f ${{ inputs.project_name }} || true
@@ -216,12 +221,13 @@ jobs:
       - name: Borrar caché de imagen docker
         run: docker image prune -af
  
-      - name: Iniciar archivo Docker Compose del proyecto
+      - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
           POSTGRES_VERSION: "13.3"
+          VULNADO_IMAGE: ${{ inputs.docker_image }}
         run: |
           docker compose up -d
-          
+
       - name: Limitar recursos de los contenedores en ejecución
         run: |
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
