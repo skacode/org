@@ -95,7 +95,15 @@ jobs:
       - name: Mover SBOM generado
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
- 
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests argparse os sys
+        
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
         run: |
