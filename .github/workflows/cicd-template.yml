@@ -109,14 +109,14 @@ jobs:
           cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
           > ${{ github.workspace }}/dependency-track-findings-fixed.json
           
-      - name: Checkout repositorio org (Upload Dependency Track Report)
+      - name: Checkout repositorio org 
         uses: actions/checkout@v3
         with:
           repository: skacode/org
           ref: main
           path: org
 
-      - name: Set up Python (Upload Dependency Track Report)
+      - name: Set up Python 
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
@@ -135,12 +135,7 @@ jobs:
   ScanSpotbugs:
     needs: ScanDependencyTrack
     runs-on: self-hosted  
-    steps:
-      - name: Clonar el repositorio
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
+    steps:      
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
@@ -156,14 +151,14 @@ jobs:
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
             nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
      
-      - name: Checkout repositorio org (Upload SpotBugs Report)
+      - name: Checkout repositorio org
         uses: actions/checkout@v3
         with:
           repository: skacode/org
           ref: main
           path: org
 
-      - name: Set up Python (Upload SpotBugs Report)
+      - name: Set up Python 
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
@@ -182,12 +177,7 @@ jobs:
   ScanTrivy:
     needs: ScanSpotbugs
     runs-on: self-hosted  
-    steps:
-      - name: Clonar el repositorio
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-            
+    steps:            
       - name: Escanear la imagen con Trivy
         run: |
           docker run --rm \
@@ -198,14 +188,14 @@ jobs:
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
             
-      - name: Checkout repositorio org (Upload Trivy Report)
+      - name: Checkout repositorio org 
         uses: actions/checkout@v3
         with:
           repository: skacode/org
           ref: main
           path: org
 
-      - name: Set up Python (Upload Trivy Report)
+      - name: Set up Python 
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
@@ -273,14 +263,14 @@ jobs:
             -config failOnError=true \
             -config rules.common.requestDelay=200
             
-      - name: Checkout repositorio org (Upload ZAP Report)
+      - name: Checkout repositorio org
         uses: actions/checkout@v3
         with:
           repository: skacode/org
           ref: main
           path: org
 
-      - name: Set up Python (Upload ZAP Report)
+      - name: Set up Python 
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
