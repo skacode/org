@@ -136,6 +136,11 @@ jobs:
     needs: ScanDependencyTrack
     runs-on: self-hosted  
     steps:      
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
