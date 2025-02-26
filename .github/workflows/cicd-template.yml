@@ -113,6 +113,8 @@ jobs:
             --file_path "${{ github.workspace }}/dependency-track-findings-fixed.json" \
             --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
             --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        env:
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   ScanSpotbugs:
     needs: ScanDependencyTrack
