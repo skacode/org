@@ -133,8 +133,11 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   ScanSpotbugs:
-    needs: ScanDependencyTrack
+    needs: SetupDefectDojo
     runs-on: self-hosted  
+    env:
+      PRODUCT_ID: ${{ needs.SetupDefectDojo.outputs.product_id }}
+      ENGAGEMENT_ID: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
     steps:          
       - name: Verificar valores de product_id y engagement_id
         run: |
@@ -169,8 +172,8 @@ jobs:
           python org/.github/scripts/uploadtodojo.py \
             --scan_type "SpotBugs Scan" \
             --file_path "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
-            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
-            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+            --engagement_id "$ENGAGEMENT_ID" \
+            --product_id "$PRODUCT_ID"
         env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
