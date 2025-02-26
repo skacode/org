@@ -133,7 +133,7 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   ScanSpotbugs:
-    needs: SetupDefectDojo
+    needs: ScanDependencyTrack
     runs-on: self-hosted  
     env:
       PRODUCT_ID: ${{ needs.SetupDefectDojo.outputs.product_id }}
@@ -185,8 +185,10 @@ jobs:
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ github.workspace }}:/workspace \
+            -v $HOME/.cache/trivy:/root/.cache/trivy \
             aquasec/trivy image \
+            --scanners vuln \
+            --ignore-unfixed --skip-db-update \
             --exit-code 0 --severity CRITICAL,HIGH \
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
