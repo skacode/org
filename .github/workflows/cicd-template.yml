@@ -193,9 +193,9 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             aquasec/trivy client \
             --remote http://localhost:4954 \
-            image "${{ inputs.docker_image }}" \
             --exit-code 0 --severity CRITICAL,HIGH \
-            --format json -o /workspace/trivy-report.json
+            --format json -o /workspace/trivy-report.json \
+            ${{ inputs.docker_image }}
 
             
       - name: Checkout repositorio org 
