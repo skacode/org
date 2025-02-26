@@ -50,12 +50,7 @@ jobs:
   ScanDependencyTrack:
     needs: SetupDefectDojo
     runs-on: self-hosted  
-    steps:
-      - name: Clonar el repositorio
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
+    steps:          
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
