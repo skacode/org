@@ -133,19 +133,9 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   ScanSpotbugs:
-    needs: ScanDependencyTrack
+    needs: SetupDefectDojo
     runs-on: self-hosted  
-    env:
-      PRODUCT_ID: ${{ needs.SetupDefectDojo.outputs.product_id }}
-      ENGAGEMENT_ID: ${{ needs.SetupDefectDojo.outputs.engagement_id }}
     steps:          
-      - name: Verificar valores de product_id y engagement_id
-        run: |
-          if [[ -z "${{ needs.SetupDefectDojo.outputs.product_id }}" || -z "${{ needs.SetupDefectDojo.outputs.engagement_id }}" ]]; then
-            echo "Error: product_id o engagement_id están vacíos"
-            exit 1
-          fi
-
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
@@ -172,13 +162,13 @@ jobs:
           python org/.github/scripts/uploadtodojo.py \
             --scan_type "SpotBugs Scan" \
             --file_path "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
-            --engagement_id "$ENGAGEMENT_ID" \
-            --product_id "$PRODUCT_ID"
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.product_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}"
         env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   ScanTrivy:
-    needs: ScanSpotbugs
+    needs: SetupDefectDojo
     runs-on: self-hosted  
     steps:            
       - name: Escanear la imagen con Trivy
@@ -225,7 +215,7 @@ jobs:
         run: docker push ${{ inputs.docker_image }}
  
   deploy:
-    needs: ScanTrivy
+    needs: [ScanDependencyTrack,ScanSpotbugs,ScanTrivy]
     runs-on: self-hosted  
     if: success()
     steps:
@@ -252,7 +242,7 @@ jobs:
           done
 
   ScanZap:
-    needs: deploy
+    needs: [deploy,SetupDefectDojo]
     runs-on: self-hosted  
     if: success()
     steps:
