@@ -159,7 +159,46 @@ jobs:
             --product_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}"
         env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-
+          
+  ScanTrivy:
+    needs: SetupDefectDojo
+    runs-on: self-hosted  
+    steps:      
+      - name: Escanear la imagen con Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/workspace \
+            aquasec/trivy image \
+            --exit-code 0 --severity CRITICAL,HIGH \
+            --format json -o /workspace/trivy-report.json \
+            ${{ inputs.docker_image }}
+ 
+      - name: Set up Python 
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Upload Trivy Report to DefectDojo
+        if: success()
+        run: |
+          python org/.github/scripts/uploadtodojo.py \
+            --scan_type "Trivy Scan" \
+            --file_path "${{ github.workspace }}/trivy-report.json" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        env:
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          
+  push:
+    needs: [ScanDependencyTrack, ScanSpotbugs, ScanTrivy]
+    runs-on: self-hosted
+    steps:
+      - name: Iniciar sesión en DockerHub
+        if: success()
+        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+      - name: Subir imagen de la aplicación a DockerHub
+        if: success()
+        run: docker push ${{ inputs.docker_image }}
 
  
   deploy:
