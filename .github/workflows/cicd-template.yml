@@ -93,10 +93,12 @@ jobs:
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
         with:
-          python-version: '3.x'
+          repository: skacode/org
+          ref: main
+          path: org
         
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
