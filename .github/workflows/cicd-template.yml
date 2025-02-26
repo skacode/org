@@ -102,7 +102,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install requests argparse os sys
+        run: pip install requests argparse 
         
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
