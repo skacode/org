@@ -46,11 +46,11 @@ jobs:
           INPUT_PROJECT_NAME: ${{ inputs.project_name }}
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           API_URL: "http://localhost:9090/api/v2"
-          
+
   ScanDependencyTrack:
     needs: SetupDefectDojo
     runs-on: self-hosted  
-    steps:          
+    steps:
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
@@ -103,20 +103,34 @@ jobs:
           curl -X GET "http://localhost:8081/api/v1/finding?project=${{ inputs.project_name }}" \
             -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
             -o ${{ github.workspace }}/dependency-track-findings.json
-            
+          
       - name: Transformar el JSON al formato correcto para DefectDojo
         run: |
           cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
           > ${{ github.workspace }}/dependency-track-findings-fixed.json
           
+      - name: Checkout repositorio org (Upload Dependency Track Report)
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
+      - name: Set up Python (Upload Dependency Track Report)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+        
       - name: Upload Dependency Track Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/action.yml@main
-        with:
-          scan_type: "Dependency Track Finding Packaging Format (FPF) Export"
-          file_path: "${{ github.workspace }}/dependency-track-findings-fixed.json"
-          engagement_id: "${{ needs.SetupDefectDojo.outputs.engagement_id }}"
-          product_id: "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        run: |
+          python org/.github/scripts/uploadtodojo.py \
+            --scan_type "Dependency Track Finding Packaging Format (FPF) Export" \
+            --file_path "${{ github.workspace }}/dependency-track-findings-fixed.json" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        env:
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   ScanSpotbugs:
     needs: ScanDependencyTrack
@@ -142,15 +156,28 @@ jobs:
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
             nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
      
+      - name: Checkout repositorio org (Upload SpotBugs Report)
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
+      - name: Set up Python (Upload SpotBugs Report)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+        
       - name: Upload SpotBugs Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/action.yml@main
-        with:
-          scan_type: "SpotBugs Scan"
-          file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml"
-          engagement_id: "${{ needs.SetupDefectDojo.outputs.engagement_id }}"
-          product_id: "${{ needs.SetupDefectDojo.outputs.product_id }}"
-      
+        run: |
+          python org/.github/scripts/uploadtodojo.py \
+            --scan_type "SpotBugs Scan" \
+            --file_path "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        env:
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   ScanTrivy:
     needs: ScanSpotbugs
@@ -171,26 +198,28 @@ jobs:
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
             
-      - name: Checkout repositorio org
+      - name: Checkout repositorio org (Upload Trivy Report)
         uses: actions/checkout@v3
         with:
           repository: skacode/org
           ref: main
           path: org
 
-      - name: Set up Python
+      - name: Set up Python (Upload Trivy Report)
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-
+        
       - name: Upload Trivy Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/action.yml@main
-        with:
-          scan_type: "Trivy Scan"
-          file_path: "${{ github.workspace }}/trivy-report.json"
-          engagement_id: "${{ needs.SetupDefectDojo.outputs.engagement_id }}"
-          product_id: "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        run: |
+          python org/.github/scripts/uploadtodojo.py \
+            --scan_type "Trivy Scan" \
+            --file_path "${{ github.workspace }}/trivy-report.json" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        env:
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
  
       - name: Iniciar sesión en DockerHub
         if: success()
@@ -244,11 +273,25 @@ jobs:
             -config failOnError=true \
             -config rules.common.requestDelay=200
             
+      - name: Checkout repositorio org (Upload ZAP Report)
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
+      - name: Set up Python (Upload ZAP Report)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+        
       - name: Upload OWASP ZAP Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/action.yml@main
-        with:
-          scan_type: "ZAP Scan"
-          file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml"
-          engagement_id: "${{ needs.SetupDefectDojo.outputs.engagement_id }}"
-          product_id: "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        run: |
+          python org/.github/scripts/uploadtodojo.py \
+            --scan_type "ZAP Scan" \
+            --file_path "${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+        env:
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
