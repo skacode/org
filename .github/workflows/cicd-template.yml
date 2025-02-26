@@ -170,18 +170,25 @@ jobs:
   ScanTrivy:
     needs: SetupDefectDojo
     runs-on: self-hosted  
-    steps:            
-      - name: Escanear la imagen con Trivy
+    steps:      
+      - name: Iniciar Trivy Server
+        run: |
+          docker run -d --name trivy-server \
+            -p 4954:4954 \
+            -v $HOME/.cache/trivy:/root/.cache/trivy \
+            aquasec/trivy server --listen 0.0.0.0:4954
+
+      - name: Escanear la imagen con Trivy Server
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v $HOME/.cache/trivy:/root/.cache/trivy \
-            aquasec/trivy image \
-            --scanners vuln \
-            --ignore-unfixed --skip-db-update \
+            -v ${{ github.workspace }}:/workspace \
+            aquasec/trivy client \
+            --remote http://localhost:4954 \
+            image ${{ inputs.docker_image }} \
             --exit-code 0 --severity CRITICAL,HIGH \
-            --format json -o /workspace/trivy-report.json \
-            ${{ inputs.docker_image }}
+            --format json -o /workspace/trivy-report.json
+
             
       - name: Checkout repositorio org 
         uses: actions/checkout@v3
