@@ -206,11 +206,6 @@ jobs:
     runs-on: self-hosted  
     if: success()
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v3
-        with:
-          ref: master
-
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
           docker rm -f ${{ inputs.project_name }} || true
