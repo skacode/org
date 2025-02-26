@@ -160,6 +160,18 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
             nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
+     
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
       
       - name: Upload SpotBugs Report a DefectDojo
         if: success()
@@ -188,7 +200,19 @@ jobs:
             --exit-code 0 --severity CRITICAL,HIGH \
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
- 
+            
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
       - name: Upload Trivy Report to DefectDojo
         if: success()
         run: |
@@ -249,6 +273,18 @@ jobs:
             -config scanner.maxScanDurationInMins=2 \
             -config failOnError=true \
             -config rules.common.requestDelay=200
+
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
             
       - name: Upload OWASP ZAP Report to DefectDojo
         if: success()
