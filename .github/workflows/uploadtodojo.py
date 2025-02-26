@@ -12,11 +12,9 @@ def main():
     parser.add_argument("--product_id", required=False, help="ID del producto en DefectDojo (opcional)")
     args = parser.parse_args()
 
-    # URL base de la API de DefectDojo
     API_URL = "http://localhost:9090/api/v2"
     endpoint = f"{API_URL}/import-scan/"
 
-    # Obtener la API Key desde las variables de entorno
     api_key = os.environ.get("DEFECTDOJO_API_KEY")
     if not api_key:
         print("Error: La variable de entorno DEFECTDOJO_API_KEY no está definida.")
@@ -28,12 +26,11 @@ def main():
 
     print(f"Subiendo reporte de {args.scan_type}...")
 
-    # Preparar los datos del formulario y el archivo a enviar
     data = {
         "scan_type": args.scan_type,
         "engagement": args.engagement_id
     }
-    # Si requieres usar product_id, puedes agregarlo:
+    
     if args.product_id:
         data["product"] = args.product_id
 
