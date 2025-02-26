@@ -207,12 +207,15 @@ jobs:
     runs-on: self-hosted  
     if: success()
     steps:
+      - name: Obtener número de ejecución
+        run: echo "IMAGE_TAG=build-${{ github.run_number }}" >> $GITHUB_ENV
+        
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
           docker rm -f ${{ inputs.project_name }} || true
  
       - name: Hacer pull de la imagen actualizada de la aplicación
-        run: docker pull ${{ inputs.docker_image }}
+        run: docker pull ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
 
       - name: Borrar caché de imagen docker
         run: docker image prune -af
@@ -220,7 +223,7 @@ jobs:
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
           POSTGRES_VERSION: "13.3"
-          VULNADO_IMAGE: ${{ inputs.docker_image }}
+          VULNADO_IMAGE: ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
         run: |
           docker compose up -d --force-recreate
 
