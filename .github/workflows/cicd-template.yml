@@ -171,32 +171,15 @@ jobs:
     needs: SetupDefectDojo
     runs-on: self-hosted  
     steps:      
-      - name: Verificar y arrancar Trivy Server
-        run: |
-          if [ "$(docker ps -q -f name=trivy-server)" ]; then
-            echo "Trivy Server ya está corriendo"
-          elif [ "$(docker ps -aq -f name=trivy-server)" ]; then
-            echo "Trivy Server existe pero está detenido. Reiniciando..."
-            docker start trivy-server
-          else
-            echo "Iniciando nuevo Trivy Server..."
-            docker run -d --name trivy-server \
-              -p 4954:4954 \
-              -v $HOME/.cache/trivy:/root/.cache/trivy \
-              aquasec/trivy server --listen 0.0.0.0:4954
-          fi
-
-      - name: Escanear la imagen con Trivy Server
+      - name: Escanear la imagen con Trivy
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
-            aquasec/trivy client \
-            --remote http://localhost:4954 \
+            aquasec/trivy image \
             --exit-code 0 --severity CRITICAL,HIGH \
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
-
             
       - name: Checkout repositorio org 
         uses: actions/checkout@v3
