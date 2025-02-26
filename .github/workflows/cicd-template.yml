@@ -39,9 +39,6 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
-        run: pip install requests
-
       - name: Ejecutar script de DefectDojo desde el repo org
         id: setup
         run: python org/.github/workflows/setupdefectdojo.py
@@ -100,9 +97,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install requests argparse 
         
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
