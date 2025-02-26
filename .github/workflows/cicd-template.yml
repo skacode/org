@@ -41,7 +41,7 @@ jobs:
 
       - name: Ejecutar script de DefectDojo desde el repo org
         id: setup
-        run: python org/.github/actions/setupdefectdojo.py
+        run: python org/.github/scripts/setupdefectdojo.py
         env:
           INPUT_PROJECT_NAME: ${{ inputs.project_name }}
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
