@@ -135,12 +135,14 @@ jobs:
   ScanSpotbugs:
     needs: ScanDependencyTrack
     runs-on: self-hosted  
-    steps:      
-      - name: Clonar el repositorio
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
+    steps:          
+      - name: Verificar valores de product_id y engagement_id
+        run: |
+          if [[ -z "${{ needs.SetupDefectDojo.outputs.product_id }}" || -z "${{ needs.SetupDefectDojo.outputs.engagement_id }}" ]]; then
+            echo "Error: product_id o engagement_id están vacíos"
+            exit 1
+          fi
+
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
@@ -155,13 +157,6 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/${{ inputs.working_directory }}:/workspace \
             nemooudeis/spotbugs sh -c "mkdir -p /workspace && spotbugs -textui -effort:max -xml:withMessages -output /workspace/spotbugsXml.xml /workspace/target/classes"
-     
-      - name: Checkout repositorio org
-        uses: actions/checkout@v3
-        with:
-          repository: skacode/org
-          ref: main
-          path: org
 
       - name: Set up Python 
         uses: actions/setup-python@v4
