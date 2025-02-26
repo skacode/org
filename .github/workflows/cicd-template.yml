@@ -107,7 +107,7 @@ jobs:
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
         run: |
-          python ./.github/workflows/uploadtodojo.py \
+          python org/.github/workflows/uploadtodojo.py \
             --scan_type "Dependency Track Finding Packaging Format (FPF) Export" \
             --file_path "${{ github.workspace }}/dependency-track-findings-fixed.json" \
             --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
