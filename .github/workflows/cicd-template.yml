@@ -116,7 +116,7 @@ jobs:
           
       - name: Upload Dependency Track Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/uploadaction.yml@main
+        uses: skacode/org/.github/actions/action.yml@main
         with:
           scan_type: "Dependency Track Finding Packaging Format (FPF) Export"
           file_path: "${{ github.workspace }}/dependency-track-findings-fixed.json"
@@ -149,7 +149,7 @@ jobs:
      
       - name: Upload SpotBugs Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/uploadaction.yml@main
+        uses: skacode/org/.github/actions/action.yml@main
         with:
           scan_type: "SpotBugs Scan"
           file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/spotbugsXml.xml"
@@ -190,7 +190,7 @@ jobs:
 
       - name: Upload Trivy Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/uploadaction.yml@main
+        uses: skacode/org/.github/actions/action.yml@main
         with:
           scan_type: "Trivy Scan"
           file_path: "${{ github.workspace }}/trivy-report.json"
@@ -251,7 +251,7 @@ jobs:
             
       - name: Upload OWASP ZAP Report to DefectDojo
         if: success()
-        uses: skacode/org/.github/actions/uploadaction.yml@main
+        uses: skacode/org/.github/actions/action.yml@main
         with:
           scan_type: "ZAP Scan"
           file_path: "${{ github.workspace }}/${{ inputs.working_directory }}/zap-report.xml"
