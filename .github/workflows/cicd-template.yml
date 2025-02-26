@@ -193,14 +193,15 @@ jobs:
     needs: [ScanDependencyTrack, ScanSpotbugs, ScanTrivy]
     runs-on: self-hosted
     steps:
-      - name: Iniciar sesión en DockerHub
-        if: success()
-        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-      - name: Subir imagen de la aplicación a DockerHub
-        if: success()
-        run: docker push ${{ inputs.docker_image }}
-
- 
+     - name: Obtener número de ejecución
+       run: echo "IMAGE_TAG=build-${{ github.run_number }}" >> $GITHUB_ENV
+      
+     - name: Etiquetar y subir imagen a DockerHub
+       if: success()
+       run: |
+          docker tag ${{ inputs.docker_image }} ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
+          docker push ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
+          
   deploy:
     needs: [push,ScanDependencyTrack,ScanSpotbugs,ScanTrivy]
     runs-on: self-hosted  
