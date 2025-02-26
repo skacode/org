@@ -108,13 +108,6 @@ jobs:
         run: |
           cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
           > ${{ github.workspace }}/dependency-track-findings-fixed.json
-          
-      - name: Checkout repositorio org 
-        uses: actions/checkout@v3
-        with:
-          repository: skacode/org
-          ref: main
-          path: org
 
       - name: Set up Python 
         uses: actions/setup-python@v4
@@ -180,13 +173,6 @@ jobs:
             --exit-code 0 --severity CRITICAL,HIGH \
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
-            
-      - name: Checkout repositorio org 
-        uses: actions/checkout@v3
-        with:
-          repository: skacode/org
-          ref: main
-          path: org
 
       - name: Set up Python 
         uses: actions/setup-python@v4
@@ -203,7 +189,10 @@ jobs:
             --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
         env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
- 
+  push:
+    needs: [ScanDependencyTrack, ScanSpotbugs, ScanTrivy]
+    runs-on: self-hosted
+    steps:
       - name: Iniciar sesión en DockerHub
         if: success()
         run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
@@ -213,7 +202,7 @@ jobs:
         run: docker push ${{ inputs.docker_image }}
  
   deploy:
-    needs: [ScanDependencyTrack,ScanSpotbugs,ScanTrivy]
+    needs: [push,ScanDependencyTrack,ScanSpotbugs,ScanTrivy]
     runs-on: self-hosted  
     if: success()
     steps:
@@ -255,13 +244,6 @@ jobs:
             -config scanner.maxScanDurationInMins=2 \
             -config failOnError=true \
             -config rules.common.requestDelay=200
-            
-      - name: Checkout repositorio org
-        uses: actions/checkout@v3
-        with:
-          repository: skacode/org
-          ref: main
-          path: org
 
       - name: Set up Python 
         uses: actions/setup-python@v4
