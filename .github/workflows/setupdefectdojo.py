@@ -1,6 +1,38 @@
 #!/usr/bin/env python3
 import os
 import requests
+import sys
+import subprocess
+import time
+
+def check_and_start_defectdojo(api_url):
+    test_url = f"{api_url}/products/?name=check"
+    try:
+        print("Verificando conexión con DefectDojo...")
+        response = requests.get(test_url, timeout=5)
+        response.raise_for_status()
+        print("DefectDojo ya está corriendo.")
+    except requests.exceptions.RequestException as e:
+        print("DefectDojo no está corriendo:", e)
+        print("Intentando iniciar DefectDojo...")
+        # Comando para iniciar DefectDojo; ajústalo según tu entorno y imagen
+        command = ["docker", "run", "-d", "--name", "defectdojo", "-p", "9090:9090", "defectdojo/defectdojo:latest"]
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            print("Error al iniciar DefectDojo:", result.stderr.decode())
+            sys.exit(1)
+        else:
+            print("DefectDojo iniciado, esperando a que se estabilice...")
+        # Esperar unos segundos para que el servicio esté disponible
+        time.sleep(10)
+        # Reintentar la conexión
+        try:
+            response = requests.get(test_url, timeout=5)
+            response.raise_for_status()
+            print("DefectDojo está ahora corriendo.")
+        except Exception as e:
+            print("DefectDojo sigue sin estar disponible:", e)
+            sys.exit(1)
 
 def main():
     project_name = os.environ.get("INPUT_PROJECT_NAME")
@@ -9,7 +41,9 @@ def main():
 
     if not project_name or not api_key:
         print("Error: se deben definir INPUT_PROJECT_NAME y DEFECTDOJO_API_KEY en las variables de entorno.")
-        exit(1)
+        sys.exit(1)
+
+    check_and_start_defectdojo(api_url)
 
     headers = {
         "Authorization": f"Token {api_key}",
@@ -68,7 +102,6 @@ def main():
             output_file.write(f"product_id={product_id}\n")
             output_file.write(f"engagement_id={engagement_id}\n")
     else:
-        # Si no se ejecuta en GitHub Actions, se imprimen las variables
         print("GITHUB_OUTPUT no está definido. Resultados:")
         print(f"product_id={product_id}")
         print(f"engagement_id={engagement_id}")
