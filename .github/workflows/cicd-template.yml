@@ -161,7 +161,7 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           
   ScanTrivy:
-    needs: SetupDefectDojo
+    needs: [SetupDefectDojo,ScanSpotbugs]
     runs-on: self-hosted  
     steps:      
       - name: Escanear la imagen con Trivy
