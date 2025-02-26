@@ -93,6 +93,27 @@ jobs:
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
 
+      - name: Subir SBOM a Dependency-Track con dtrack CLI
+        run: |
+         dtrack-cli bom upload \
+            --server http://localhost:8081 \
+            --api-key "${{ secrets.DT_API_KEY }}" \
+            --project-name "${{ inputs.project_name }}" \
+            --project-version "1.0" \
+            --bom-path "bom.json"
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+        
+      - name: Guardar hallazgos de Dependency-Track en JSON
+        run: |
+          curl -X GET "http://localhost:8081/api/v1/finding?project=${{ inputs.project_name }}" \
+            -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
+            -o ${{ github.workspace }}/dependency-track-findings.json
+            
+      - name: Transformar el JSON al formato correcto para DefectDojo
+        run: |
+          cat ${{ github.workspace }}/dependency-track-findings.json | jq '{ "findings": . }' \
+          > ${{ github.workspace }}/dependency-track-findings-fixed.json
+      
       - name: Checkout repositorio org
         uses: actions/checkout@v3
         with:
