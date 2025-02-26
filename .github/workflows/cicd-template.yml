@@ -99,6 +99,11 @@ jobs:
           repository: skacode/org
           ref: main
           path: org
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
         
       - name: Upload Dependency-Track Report a DefectDojo
         if: success()
