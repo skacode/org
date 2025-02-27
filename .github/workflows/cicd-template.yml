@@ -236,8 +236,6 @@ jobs:
               -v $HOME/.cache/trivy:/home/none/.cache/trivy \
               aquasec/trivy image \
               --format json -o /workspace/trivy-report.json \
-              --skip-db-update \
-              --skip-java-db-update \
               ${{ steps.build_fixed.outputs.new_image }}
               
     - name: Upload Trivy Report to DefectDojo
