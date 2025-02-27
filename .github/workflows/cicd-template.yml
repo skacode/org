@@ -176,6 +176,7 @@ jobs:
             ${{ inputs.docker_image }}
             
       - name: Set up Python 
+        if: always()
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
