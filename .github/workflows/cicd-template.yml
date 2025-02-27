@@ -39,9 +39,6 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Instalar Requests
-        run: pip install requests
-
       - name: Ejecutar script de DefectDojo desde el repo org
         id: setup
         run: python org/.github/scripts/setupdefectdojo.py
@@ -208,7 +205,6 @@ jobs:
   deploy:
     needs: [push,ScanDependencyTrack,ScanSpotbugs,ScanTrivy]
     runs-on: self-hosted  
-    if: success()
     steps:
       - name: Obtener número de ejecución
         run: echo "IMAGE_TAG=build-${{ github.run_number }}" >> $GITHUB_ENV
