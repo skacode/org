@@ -173,7 +173,6 @@ jobs:
             aquasec/trivy image \
             --exit-code 1 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
-            --skip-db-update \
             ${{ inputs.docker_image }}
             
       - name: Set up Python 
@@ -238,7 +237,6 @@ jobs:
               aquasec/trivy image \
               --exit-code 1 --severity CRITICAL \
               --format json -o /workspace/trivy-report.json \
-              --skip-db-update \
               ${{ steps.build_fixed.outputs.new_image }}
             FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
             echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
