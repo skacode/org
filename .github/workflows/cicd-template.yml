@@ -172,6 +172,7 @@ jobs:
             aquasec/trivy image \
             --exit-code 0 --severity CRITICAL,HIGH \
             --format json -o /workspace/trivy-report.json \
+            --scanners vuln
             ${{ inputs.docker_image }}
  
       - name: Set up Python 
@@ -193,15 +194,11 @@ jobs:
     needs: [ScanDependencyTrack, ScanSpotbugs, ScanTrivy]
     runs-on: self-hosted
     steps:
-     - name: Obtener número de ejecución
-       run: echo "IMAGE_TAG=build-${{ github.run_number }}" >> $GITHUB_ENV
-      
      - name: Etiquetar y subir imagen a DockerHub
-       if: success()
        run: |
-          docker tag ${{ inputs.docker_image }} ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
-          docker push ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
-          
+          docker tag ${{ inputs.docker_image }} skacode/vulnado:build-${{ github.run_number }}
+          docker push skacode/vulnado:build-${{ github.run_number }}
+              
   deploy:
     needs: [push]
     runs-on: self-hosted  
