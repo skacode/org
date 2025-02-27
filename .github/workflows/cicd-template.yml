@@ -224,10 +224,10 @@ jobs:
     - name: Construir imagen corregida
       id: build_fixed
       run: |
-          IMAGE_NAME="nado:build-${{ github.run_number }}"
-          docker build -t $IMAGE_NAME .
-          echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
-        
+            IMAGE_NAME="${{ inputs.docker_image }}:build-${{ github.run_number }}"
+            docker build -t $IMAGE_NAME .
+            echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
+            
     - name: Verificar si ya no hay vulnerabilidades críticas
       run: |
             docker run --rm \
@@ -235,7 +235,6 @@ jobs:
               -v ${{ github.workspace }}:/workspace \
               -v $HOME/.cache/trivy:/home/none/.cache/trivy \
               aquasec/trivy image \
-              --exit-code 1 --severity CRITICAL \
               --format json -o /workspace/trivy-report.json \
               ${{ steps.build_fixed.outputs.new_image }}
             FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
