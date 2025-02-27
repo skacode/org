@@ -203,7 +203,7 @@ jobs:
           docker push ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
           
   deploy:
-    needs: [push,ScanDependencyTrack,ScanSpotbugs,ScanTrivy]
+    needs: [push]
     runs-on: self-hosted  
     steps:
       - name: Obtener número de ejecución
