@@ -168,13 +168,11 @@ jobs:
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v /home/none/vulnado/actions-runner/_work/vulnado/vulnado:/workspace \
-            -v $HOME/.cache/trivy:/root/.cache/trivy \ 
+            -v ${{ github.workspace }}:/workspace \
+            -v $HOME/.cache/trivy:/root/.cache/trivy \
             aquasec/trivy image \
             --exit-code 1 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
-            --scanners vuln \
-            --skip-db-update \  
             ${{ inputs.docker_image }}
             
       - name: Set up Python 
@@ -236,10 +234,14 @@ jobs:
         
     - name: Verificar si ya no hay vulnerabilidades críticas
       run: |
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache/trivy:/root/.cache/trivy \
-            aquasec/trivy image --exit-code 1 --severity CRITICAL \
-            --format json -o ${{ github.workspace }}/trivy-report.json --scanners vuln \
-            ${{ steps.build_fixed.outputs.new_image }}
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v ${{ github.workspace }}:/workspace \
+              -v $HOME/.cache/trivy:/root/.cache/trivy \
+              aquasec/trivy image \
+              --exit-code 1 --severity CRITICAL \
+              --format json -o /workspace/trivy-report.json \
+              ${{ inputs.docker_image }}
             FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
             echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
             if [[ "$FIXED_VULNS" -eq 0 ]]; then
