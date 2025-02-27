@@ -170,6 +170,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/.cache/trivy:/root/.cache/trivy \
+            --skip-db-update \
             aquasec/trivy image \
             --exit-code 1 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
@@ -238,6 +239,7 @@ jobs:
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v ${{ github.workspace }}:/workspace \
               -v $HOME/.cache/trivy:/root/.cache/trivy \
+              --skip-db-update \
               aquasec/trivy image \
               --exit-code 1 --severity CRITICAL \
               --format json -o /workspace/trivy-report.json \
