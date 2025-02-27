@@ -1,4 +1,4 @@
-name: CI/CD - Security Pipeline with SpotBugs, Dependency Track, Trivy y ZAP
+name: CI/CD - Security Pipeline with SpotBugs, Dependency Track, Trivy and ZAP
 
 on:
   workflow_call:
@@ -21,7 +21,7 @@ on:
         type: string
 
 jobs:
-  SetupDefectDojo:
+  setupDefectDojo:
     runs-on: self-hosted
     outputs:
       product_id: ${{ steps.setup.outputs.product_id }}
@@ -47,8 +47,8 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           API_URL: "http://localhost:9090/api/v2"
 
-  ScanDependencyTrack:
-    needs: SetupDefectDojo
+  scanDependencyTrack:
+    needs: setupDefectDojo
     runs-on: self-hosted  
     steps:
       - name: Verificar si Dependency-Track API está corriendo
@@ -125,8 +125,8 @@ jobs:
         env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
-  ScanSpotbugs:
-    needs: SetupDefectDojo
+  scanSpotbugs:
+    needs: setupDefectDojo
     runs-on: self-hosted  
     steps:          
       - name: Construir la aplicación con Maven
@@ -160,8 +160,8 @@ jobs:
         env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           
-  ScanTrivy:
-    needs: [SetupDefectDojo,ScanSpotbugs]
+  scanTrivy:
+    needs: [setupDefectDojo,scanSpotbugs]
     runs-on: self-hosted  
     steps:      
       - name: Escanear la imagen con Trivy
@@ -170,7 +170,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
             aquasec/trivy image \
-            --exit-code 0 --severity CRITICAL,HIGH \
+            --exit-code 1 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
             --scanners vuln \
             ${{ inputs.docker_image }}
@@ -189,29 +189,78 @@ jobs:
             --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
         env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+
+  checkSolveVulns:
+    needs: scanTrivy
+    runs-on: selfhosted
+    if: failure()
+    outputs:
+      new_image: ${{ steps.build_fixed.outputs.new_image }} 
+    steps:
+    - name: Obtener el reporte de Trivy
+      run: cat ${{ github.workspace }}/trivy-report.json
+
+    - name: Extraer vulnerabilidades críticas
+      run: |
+        CRITICAL_VULNS=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
+        echo "CRITICAL_COUNT=$CRITICAL_VULNS" >> $GITHUB_ENV
+
+    - name: Notificar si hay vulnerabilidades críticas
+      if: env.CRITICAL_COUNT != '0'
+      run: echo "Se encontraron $CRITICAL_COUNT vulnerabilidades críticas. Intentando actualizar dependencias..."
+
+    - name: Actualizar dependencias en base a los paquetes vulnerables
+      if: env.CRITICAL_COUNT != '0'
+      run: |
+        VULN_PACKAGES=$(jq -r '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | @csv' ${{ github.workspace }}/trivy-report.json)
+        for package in $(echo $VULN_PACKAGES | tr ',' ' ' | tr -d '"'); do
+          echo "Actualizando $package..."
+          if [ -f "package.json" ]; then
+            npm update $package
+          elif [ -f "requirements.txt" ]; then
+            pip install --upgrade $package
+          elif [ -f "pom.xml" ]; then
+            mvn versions:use-latest-releases -Dincludes=$package
+          elif [ -f "go.mod" ]; then
+            go get -u $package
+          fi
+        done
+        
+    - name: Verificar si ya no hay vulnerabilidades críticas
+      run: |
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${{ github.workspace }}:/workspace aquasec/trivy fs --severity CRITICAL --format json -o /workspace/trivy-report.json .
+        FIXED_VULNS=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
+        echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
+        
+    - name: Construir imagen corregida con las vulnerabilidades solucionadas
+      id: build_fixed
+      if: ${{ env.FIXED_VULNS == '0' }}
+      run: |
+        IMAGE_NAME="skacode/vulnado:build-${{ github.run_number }}"
+        docker build -t $IMAGE_NAME .
+        echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT 
           
   push:
-    needs: [ScanDependencyTrack, ScanSpotbugs, ScanTrivy]
+    needs: [checkSolveVulns]
+    if: success()
     runs-on: self-hosted
     steps:
-     - name: Etiquetar y subir imagen a DockerHub
-       run: |
-          docker tag ${{ inputs.docker_image }} skacode/vulnado:build-${{ github.run_number }}
-          docker push skacode/vulnado:build-${{ github.run_number }}
+    - name: Iniciar sesión en DockerHub
+      run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+    - name: Etiquetar y subir imagen a DockerHub
+      run: |
+         docker push ${{ needs.checkSolveVulns.outputs.new_image }}
               
   deploy:
     needs: [push]
     runs-on: self-hosted  
-    steps:
-      - name: Obtener número de ejecución
-        run: echo "IMAGE_TAG=build-${{ github.run_number }}" >> $GITHUB_ENV
-        
+    steps:        
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
           docker rm -f ${{ inputs.project_name }} || true
  
       - name: Hacer pull de la imagen actualizada de la aplicación
-        run: docker pull ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
+        run: docker pull skacode/vulnado:build-${{ github.run_number }}
 
       - name: Borrar caché de imagen docker
         run: docker image prune -af
@@ -230,7 +279,7 @@ jobs:
           done
 
   ScanZap:
-    needs: [deploy,SetupDefectDojo]
+    needs: [deploy,setupDefectDojo]
     runs-on: self-hosted  
     if: success()
     steps:
