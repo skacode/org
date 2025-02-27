@@ -180,7 +180,6 @@ jobs:
         with:
           python-version: '3.x'
       - name: Upload Trivy Report to DefectDojo
-        if: success()
         run: |
           python org/.github/scripts/uploadtodojo.py \
             --scan_type "Trivy Scan" \
@@ -191,9 +190,9 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
   checkSolveVulns:
-    needs: scanTrivy
+    needs: [setupDefectDojo,scanTrivy]
     runs-on: self-hosted
-    if: failure()
+    if: ${{ needs.scanTrivy.result == 'failure' }}
     outputs:
       new_image: ${{ steps.build_fixed.outputs.new_image }} 
     steps:
@@ -204,10 +203,6 @@ jobs:
       run: |
         CRITICAL_VULNS=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
         echo "CRITICAL_COUNT=$CRITICAL_VULNS" >> $GITHUB_ENV
-
-    - name: Notificar si hay vulnerabilidades críticas
-      if: env.CRITICAL_COUNT != '0'
-      run: echo "Se encontraron $CRITICAL_COUNT vulnerabilidades críticas. Intentando actualizar dependencias..."
 
     - name: Actualizar dependencias en base a los paquetes vulnerables
       if: env.CRITICAL_COUNT != '0'
@@ -232,6 +227,16 @@ jobs:
           aquasec/trivy fs --severity CRITICAL --format json -o /workspace/trivy-report.json .
         FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
         echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
+
+    - name: Upload Trivy Report to DefectDojo
+      run: |
+          python org/.github/scripts/uploadtodojo.py \
+            --scan_type "Trivy Scan" \
+            --file_path "${{ github.workspace }}/trivy-report.json" \
+            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
+            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
+      env:
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
     - name: Construir imagen corregida con las vulnerabilidades solucionadas
       id: build_fixed
