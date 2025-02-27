@@ -169,7 +169,7 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
-            -v $HOME/.cache/trivy:/root/.cache/trivy \
+            -v $HOME/.cache/trivy:/home/none/.cache/trivy \
             aquasec/trivy image \
             --exit-code 1 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
@@ -194,10 +194,6 @@ jobs:
     needs: [setupDefectDojo,scanTrivy]
     runs-on: self-hosted
     if: ${{ needs.setupDefectDojo.result == 'success' && failure() }}
-    strategy:
-      matrix:
-        attempt: [1,2,3]
-      max-parallel: 1
     outputs:
       new_image: ${{ steps.build_fixed.outputs.new_image }} 
     steps:
@@ -238,12 +234,12 @@ jobs:
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v ${{ github.workspace }}:/workspace \
-              -v $HOME/.cache/trivy:/root/.cache/trivy \
+              -v $HOME/.cache/trivy:/home/none/.cache/trivy \
               aquasec/trivy image \
               --exit-code 1 --severity CRITICAL \
               --format json -o /workspace/trivy-report.json \
               --skip-db-update \
-              ${{ inputs.docker_image }}
+              ${{ steps.build_fixed.outputs.new_image }}
             FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
             echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
             if [[ "$FIXED_VULNS" -eq 0 ]]; then
@@ -253,7 +249,6 @@ jobs:
             fi
 
     - name: Upload Trivy Report to DefectDojo
-      if: ${{ matrix.attempt == 3 || env.FIXED_VULNS == '0' }}
       run: |
           python org/.github/scripts/uploadtodojo.py \
             --scan_type "Trivy Scan" \
