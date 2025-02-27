@@ -192,7 +192,7 @@ jobs:
 
   checkSolveVulns:
     needs: scanTrivy
-    runs-on: selfhosted
+    runs-on: self-hosted
     if: failure()
     outputs:
       new_image: ${{ steps.build_fixed.outputs.new_image }} 
