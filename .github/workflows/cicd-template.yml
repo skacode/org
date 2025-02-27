@@ -169,13 +169,13 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v /home/none/vulnado/actions-runner/_work/vulnado/vulnado:/workspace \
-            -v $HOME/.cache/trivy:/root/.cache/trivy \  # Persistir base de datos
+            -v $HOME/.cache/trivy:/root/.cache/trivy \ 
             aquasec/trivy image \
             --exit-code 1 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
             --scanners vuln \
             --skip-db-update \  
-            skacode/vulnado:latest
+            ${{ inputs.docker_image }}
             
       - name: Set up Python 
         uses: actions/setup-python@v4
@@ -198,6 +198,7 @@ jobs:
     strategy:
       matrix:
         attempt: [1,2,3]
+      max-parallel: 1
     outputs:
       new_image: ${{ steps.build_fixed.outputs.new_image }} 
     steps:
@@ -229,7 +230,7 @@ jobs:
     - name: Construir imagen corregida
       id: build_fixed
       run: |
-          IMAGE_NAME="skacode/vulnado:build-${{ github.run_number }}"
+          IMAGE_NAME="nado:build-${{ github.run_number }}"
           docker build -t $IMAGE_NAME .
           echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
         
