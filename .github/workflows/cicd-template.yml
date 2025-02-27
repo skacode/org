@@ -228,10 +228,11 @@ jobs:
         
     - name: Verificar si ya no hay vulnerabilidades críticas
       run: |
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${{ github.workspace }}:/workspace aquasec/trivy fs --severity CRITICAL --format json -o /workspace/trivy-report.json .
-        FIXED_VULNS=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${{ github.workspace }}:/workspace \
+          aquasec/trivy fs --severity CRITICAL --format json -o /workspace/trivy-report.json .
+        FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
         echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
-        
+
     - name: Construir imagen corregida con las vulnerabilidades solucionadas
       id: build_fixed
       if: ${{ env.FIXED_VULNS == '0' }}
@@ -278,7 +279,7 @@ jobs:
             docker update --memory=512m --memory-swap=1g --cpus=0.5 "$container"
           done
 
-  ScanZap:
+  scanZap:
     needs: [deploy,setupDefectDojo]
     runs-on: self-hosted  
     if: success()
