@@ -168,13 +168,15 @@ jobs:
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ github.workspace }}:/workspace \
+            -v /home/none/vulnado/actions-runner/_work/vulnado/vulnado:/workspace \
+            -v $HOME/.cache/trivy:/root/.cache/trivy \  # Persistir base de datos
             aquasec/trivy image \
             --exit-code 1 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
             --scanners vuln \
-            ${{ inputs.docker_image }}
- 
+            --skip-db-update \  
+            skacode/vulnado:latest
+            
       - name: Set up Python 
         uses: actions/setup-python@v4
         with:
@@ -193,6 +195,9 @@ jobs:
     needs: [setupDefectDojo,scanTrivy]
     runs-on: self-hosted
     if: ${{ needs.setupDefectDojo.result == 'success' && failure() }}
+    strategy:
+      matrix:
+        attempt: [1,2,3]
     outputs:
       new_image: ${{ steps.build_fixed.outputs.new_image }} 
     steps:
@@ -203,7 +208,7 @@ jobs:
       run: |
         CRITICAL_VULNS=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
         echo "CRITICAL_COUNT=$CRITICAL_VULNS" >> $GITHUB_ENV
-
+    
     - name: Actualizar dependencias en base a los paquetes vulnerables
       if: env.CRITICAL_COUNT != '0'
       run: |
@@ -221,14 +226,29 @@ jobs:
           fi
         done
         
+    - name: Construir imagen corregida
+      id: build_fixed
+      run: |
+          IMAGE_NAME="skacode/vulnado:build-${{ github.run_number }}"
+          docker build -t $IMAGE_NAME .
+          echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        
     - name: Verificar si ya no hay vulnerabilidades críticas
       run: |
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${{ github.workspace }}:/workspace \
-          aquasec/trivy fs --severity CRITICAL --format json -o /workspace/trivy-report.json .
-        FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
-        echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache/trivy:/root/.cache/trivy \
+            aquasec/trivy image --exit-code 1 --severity CRITICAL \
+            --format json -o ${{ github.workspace }}/trivy-report.json --scanners vuln \
+            ${{ steps.build_fixed.outputs.new_image }}
+            FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
+            echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
+            if [[ "$FIXED_VULNS" -eq 0 ]]; then
+                exit 0
+            else
+                exit 1
+            fi
 
     - name: Upload Trivy Report to DefectDojo
+      if: ${{ matrix.attempt == 3 || env.FIXED_VULNS == '0' }}
       run: |
           python org/.github/scripts/uploadtodojo.py \
             --scan_type "Trivy Scan" \
@@ -237,14 +257,6 @@ jobs:
             --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
       env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-
-    - name: Construir imagen corregida con las vulnerabilidades solucionadas
-      id: build_fixed
-      if: ${{ env.FIXED_VULNS == '0' }}
-      run: |
-        IMAGE_NAME="skacode/vulnado:build-${{ github.run_number }}"
-        docker build -t $IMAGE_NAME .
-        echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT 
           
   push:
     needs: [checkSolveVulns]
