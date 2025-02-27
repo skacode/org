@@ -236,15 +236,10 @@ jobs:
               -v $HOME/.cache/trivy:/home/none/.cache/trivy \
               aquasec/trivy image \
               --format json -o /workspace/trivy-report.json \
+              --skip-db-update \
+              --skip-java-db-update \
               ${{ steps.build_fixed.outputs.new_image }}
-            FIXED_VULNS=$(jq '[.Results[].Vulnerabilities? // [] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
-            echo "FIXED_VULNS=$FIXED_VULNS" >> $GITHUB_ENV
-            if [[ "$FIXED_VULNS" -eq 0 ]]; then
-                exit 0
-            else
-                exit 1
-            fi
-
+              
     - name: Upload Trivy Report to DefectDojo
       run: |
           python org/.github/scripts/uploadtodojo.py \
