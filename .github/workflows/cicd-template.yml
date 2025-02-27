@@ -228,7 +228,7 @@ jobs:
             docker build -t $IMAGE_NAME .
             echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
             
-    - name: Verificar si ya no hay vulnerabilidades críticas
+    - name: Volver a escanear con Trivy
       run: |
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
@@ -237,6 +237,11 @@ jobs:
               aquasec/trivy image \
               --format json -o /workspace/trivy-report.json \
               ${{ steps.build_fixed.outputs.new_image }}
+              
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with: 
+        python-version: '3.x'
               
     - name: Upload Trivy Report to DefectDojo
       run: |
