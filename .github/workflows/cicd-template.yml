@@ -90,7 +90,7 @@ jobs:
           
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-          dtrack-cli --server http://localhost:8081 --api-key ${{ secrets.DT_API_KEY }} --project-name ${{ inputs.project_name }} --project-version "1.0" --auto-create true --bom-path bom.json
+          dtrack-cli --server http://localhost:8081 --api-key "${{ secrets.DT_API_KEY }}" --project-name ${{ inputs.project_name }} --project-version "1.0" --auto-create true --bom-path bom.json
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
         
       - name: Guardar hallazgos de Dependency-Track en JSON
@@ -188,7 +188,7 @@ jobs:
        run: |
         docker run --rm --network host \
           -v ${{ github.workspace }}:/workspace \
-          aquasec/trivy client image \
+          aquasec/trivy client \
           --exit-code 1 --severity CRITICAL \
           --format json -o /workspace/trivy-report.json \
           ${{ inputs.docker_image }}
