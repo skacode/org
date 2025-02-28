@@ -54,6 +54,13 @@ jobs:
     needs: setupDefectDojo
     runs-on: self-hosted  
     steps:
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+          
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
