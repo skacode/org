@@ -88,6 +88,15 @@ jobs:
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
 
+      - name: Comprobar existencia de Proyecto en DTrack
+        run: |
+          echo "Verificando si el proyecto '${{ inputs.project_name }}' existe en Dependency-Track..."
+          dtrack-cli project create \
+            --server http://localhost:8081 \
+            --api-key "${{ secrets.DT_API_KEY }}" \
+            --project-name "${{ inputs.project_name }}" \
+            --project-version "1.0" || echo "El proyecto ya existe..."
+          
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
          dtrack-cli bom upload \
