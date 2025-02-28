@@ -54,7 +54,7 @@ jobs:
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
-          if [ "$(docker ps -q -f name=none-apiserver-1)" ]; then
+          if [ "$(docker ps -q -f name=dt-apiserver-1)" ]; then
             echo "running=true" >> $GITHUB_ENV
           else
             echo "running=false" >> $GITHUB_ENV
@@ -63,11 +63,11 @@ jobs:
       - name: Iniciar Dependency-Track si está detenido o crear si no existe
         if: env.running == 'false'
         run: |
-          if [ "$(docker ps -aq -f name=dependency-track-api)" ]; then
-            docker start none-apiserver-1
+          if [ "$(docker ps -aq -f name=dt-apiserver-1)" ]; then
+            docker start dt-apiserver-1
           else
             docker run -d \
-              -p 8081:8080 --name none-apiserver-1 \
+              -p 8081:8080 --name dt-apiserver-1 \
               dependencytrack/apiserver
           fi
  
@@ -78,11 +78,6 @@ jobs:
             sleep 5
           done
           echo "Dependency-Track listo."
-
-      - name: Prueba
-        run: | 
-          curl -v -X GET "http://localhost:8081/api/version" \
-           -H "X-Api-Key: ${{ secrets.DT_API_KEY }}"
 
       - name: Generar SBOM con CycloneDX (Maven)
         run: |
