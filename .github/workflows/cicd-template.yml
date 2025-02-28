@@ -95,7 +95,7 @@ jobs:
             --api-key "${{ secrets.DT_API_KEY }}" \
             --project-name "${{ inputs.project_name }}" \
             --project-version "1.0" \
-            --auto-create \
+            --auto-create true \
             --bom-path "bom.json"
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
         
@@ -167,7 +167,7 @@ jobs:
     steps:      
      - name: Iniciar Trivy Server
        run: |
-        docker run -d --rm --name trivy-server -p 4954:4954 aquasec/trivy server
+        docker run -d --rm --name trivy-server-1 -p 4954:4954 aquasec/trivy server
 
      - name: Esperar a que Trivy Server esté disponible
        run: |
@@ -253,7 +253,7 @@ jobs:
           ${{ steps.build_fixed.outputs.new_image }}
 
     - name: Detener Trivy Server
-      run: docker stop trivy-server || true
+      run: docker stop trivy-server-1 || true
               
     - name: Set up Python
       uses: actions/setup-python@v4
