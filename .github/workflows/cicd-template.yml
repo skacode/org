@@ -164,17 +164,24 @@ jobs:
     needs: [setupDefectDojo,scanSpotbugs]
     runs-on: self-hosted  
     steps:      
-     - name: Escanear la imagen con Trivy
+     - name: Iniciar Escaneo Trivy
        run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ github.workspace }}:/workspace \
-            -v $HOME/.cache/trivy:/home/none/.cache/trivy \
-            aquasec/trivy image \
-            --exit-code 0 --severity CRITICAL \
-            --format json -o /workspace/trivy-report.json \
-            ${{ inputs.docker_image }}
-            
+         $CONTAINER_NAME = trivy_scanner
+         if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
+            echo "El contenedor ya existe, iniciándolo..."
+            docker start $CONTAINER_NAME
+         else
+            echo "El contenedor no existe, ejecutándolo..."
+            docker run --rm --name $CONTAINER_NAME \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v ${{ github.workspace }}:/workspace \
+              -v $HOME/.cache/trivy:/home/none/.cache/trivy \
+              aquasec/trivy image \
+              --exit-code 0 --severity CRITICAL \
+              --format json -o /workspace/trivy-report.json \
+              ${{ inputs.docker_image }}
+         fi
+         
      - name: Set up Python 
        if: always()
        uses: actions/setup-python@v4
@@ -197,6 +204,13 @@ jobs:
     if: success()
     runs-on: self-hosted
     steps:
+    - name: Construir imagen corregida
+      id: build_fixed
+      run: |
+            IMAGE_NAME="${{ inputs.docker_image }}:build-${{ github.run_number }}"
+            docker build --no-cache -t $IMAGE_NAME .
+            echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
     - name: Iniciar sesión en DockerHub
       run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
     - name: Etiquetar y subir imagen a DockerHub
@@ -212,15 +226,14 @@ jobs:
           docker rm -f ${{ inputs.project_name }} || true
  
       - name: Hacer pull de la imagen actualizada de la aplicación
-        run: docker pull skacode/vulnado:build-${{ github.run_number }}
+        run: docker pull skacode/dvja:build-${{ github.run_number }}
 
       - name: Borrar caché de imagen docker
         run: docker image prune -af
  
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
-          POSTGRES_VERSION: "13.3"
-          VULNADO_IMAGE: ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
+          DVJA_IMAGE: ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
         run: |
           docker compose up -d --force-recreate
 
