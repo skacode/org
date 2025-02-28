@@ -142,12 +142,6 @@ jobs:
       - name: Clonar el repositorio
         uses: actions/checkout@v3
         
-      - name: Borrar la caché de Maven (Forzar uso de la versión nueva)
-        run: rm -rf ~/.m2/repository/org/apache/maven/plugins/maven-war-plugin
-
-      - name: Verificar que el `pom.xml` tiene `maven-war-plugin`
-        run: cat pom.xml | grep -A 5 "maven-war-plugin"
-        
       - name: Construir la aplicación con Maven
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 
