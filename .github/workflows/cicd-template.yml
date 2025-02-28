@@ -90,13 +90,12 @@ jobs:
           
       - name: Subir SBOM a Dependency-Track con curl
         run: |
-         echo "Subiendo BOM a Dependency-Track..." \
-         dtrack-cli bom upload \
-            --server http://localhost:8081 \
-            --api-key "${{ secrets.DT_API_KEY }}" \
-            --project-name "${{ inputs.project_name }}" \
-            --project-version "1.0" \
-            --bom-path "bom.json"
+           dtrack-cli bom upload \
+              --server http://localhost:8081 \
+              --api-key "${{ secrets.DT_API_KEY }}" \
+              --project-name "${{ inputs.project_name }}" \
+              --project-version "1.0" \
+              --bom-path "bom.json"
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
 
       - name: Guardar hallazgos de Dependency-Track en JSON
