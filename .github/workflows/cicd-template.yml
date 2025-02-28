@@ -88,11 +88,15 @@ jobs:
         run: |
           mv ${{ github.workspace }}/${{ inputs.working_directory }}/target/bom.json ${{ github.workspace }}/${{ inputs.working_directory }}/bom.json
           
-      - name: Subir SBOM a Dependency-Track con dtrack CLI
+      - name: Subir SBOM a Dependency-Track con curl
         run: |
-          dtrack-cli --server http://localhost:8081 --api-key ${{ secrets.DT_API_KEY }} --project-name ${{ inputs.project_name }} --project-version "1.0" --bom-path bom.json
+         echo "Subiendo BOM a Dependency-Track..."
+         curl -v -X PUT "http://localhost:8081/api/v1/bom?projectName=${{ inputs.project_name }}&projectVersion=1.0&autoCreate=true" \
+             -H "Content-Type: application/json" \
+             -H "X-API-Key: ${{ secrets.DT_API_KEY }}" \
+             --data-binary @bom.json
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-        
+
       - name: Guardar hallazgos de Dependency-Track en JSON
         run: |
           curl -X GET "http://localhost:8081/api/v1/finding?project=${{ inputs.project_name }}" \
@@ -188,7 +192,7 @@ jobs:
        run: |
         docker run --rm --network host \
           -v /home/none/vulnado/actions-runner/_work/vulnado/vulnado:/workspace \
-          aquasec/trivy client \
+          aquasec/trivy image \
           --remote http://localhost:4954 \
           --exit-code 1 --severity CRITICAL \
           --format json -o /workspace/trivy-report.json \
@@ -254,7 +258,7 @@ jobs:
       run: |
         docker run --rm --network host \
           -v /home/none/vulnado/actions-runner/_work/vulnado/vulnado:/workspace \
-          aquasec/trivy client \
+          aquasec/trivy image \
           --remote http://localhost:4954 \
           --exit-code 1 --severity CRITICAL \
           --format json -o /workspace/trivy-report.json \
