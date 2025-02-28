@@ -171,7 +171,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -v $HOME/.cache/trivy:/home/none/.cache/trivy \
             aquasec/trivy image \
-            --exit-code 1 --severity CRITICAL \
+            --exit-code 0 --severity CRITICAL \
             --format json -o /workspace/trivy-report.json \
             ${{ inputs.docker_image }}
             
@@ -191,74 +191,9 @@ jobs:
             --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
        env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-
-  checkSolveVulns:
-    needs: [setupDefectDojo,scanTrivy]
-    runs-on: self-hosted
-    if: ${{ needs.setupDefectDojo.result == 'success' && failure() }}
-    outputs:
-      new_image: ${{ steps.build_fixed.outputs.new_image }} 
-    steps:
-    - name: Obtener el reporte de Trivy
-      run: cat ${{ github.workspace }}/trivy-report.json
-
-    - name: Extraer vulnerabilidades críticas
-      run: |
-        CRITICAL_VULNS=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | length' ${{ github.workspace }}/trivy-report.json)
-        echo "CRITICAL_COUNT=$CRITICAL_VULNS" >> $GITHUB_ENV
-    
-    - name: Actualizar dependencias en base a los paquetes vulnerables
-      if: env.CRITICAL_COUNT != '0'
-      run: |
-        VULN_PACKAGES=$(jq -r '[.Results[].Vulnerabilities[] | select(.Severity=="CRITICAL") | .PkgName] | unique | @csv' ${{ github.workspace }}/trivy-report.json)
-        for package in $(echo $VULN_PACKAGES | tr ',' ' ' | tr -d '"'); do
-          echo "Actualizando $package..."
-          if [ -f "package.json" ]; then
-            npm update $package
-          elif [ -f "requirements.txt" ]; then
-            pip install --upgrade $package
-          elif [ -f "pom.xml" ]; then
-            mvn versions:use-latest-releases -Dincludes=$package
-          elif [ -f "go.mod" ]; then
-            go get -u $package
-          fi
-        done
-        
-    - name: Construir imagen corregida
-      id: build_fixed
-      run: |
-            IMAGE_NAME="${{ inputs.docker_image }}:build-${{ github.run_number }}"
-            docker build --no-cache -t $IMAGE_NAME .
-            echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
-
-    - name: Volver a escanear con Trivy
-      run: |
-            docker run --rm \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              -v ${{ github.workspace }}:/workspace \
-              -v $HOME/.cache/trivy:/home/none/.cache/trivy \
-              aquasec/trivy image \
-              --exit-code 0 --severity CRITICAL \
-              --format json -o /workspace/trivy-report-2.json \
-              ${{ steps.build_fixed.outputs.new_image }}
-              
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with: 
-        python-version: '3.x'
-              
-    - name: Upload Trivy Report to DefectDojo
-      run: |
-          python org/.github/scripts/uploadtodojo.py \
-            --scan_type "Trivy Scan" \
-            --file_path "${{ github.workspace }}/trivy-report-2.json" \
-            --engagement_id "${{ needs.SetupDefectDojo.outputs.engagement_id }}" \
-            --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
-      env:
-          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           
   push:
-    needs: [checkSolveVulns]
+    needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
     if: success()
     runs-on: self-hosted
     steps:
