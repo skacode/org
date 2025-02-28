@@ -131,7 +131,10 @@ jobs:
   scanSpotbugs:
     needs: setupDefectDojo
     runs-on: self-hosted  
-    steps:          
+    steps:   
+      - name: Clonar el repositorio
+        uses: actions/checkout@v3
+        
       - name: Construir la aplicación con Maven
         run: mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
