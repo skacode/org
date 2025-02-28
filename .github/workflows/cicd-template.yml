@@ -187,11 +187,12 @@ jobs:
      - name: Escanear la imagen con Trivy Client (modo servidor)
        run: |
         docker run --rm --network host \
-          -v ${{ github.workspace }}:/workspace \
+          -v /home/none/vulnado/actions-runner/_work/vulnado/vulnado:/workspace \
           aquasec/trivy client \
+          --remote http://localhost:4954 \
           --exit-code 1 --severity CRITICAL \
           --format json -o /workspace/trivy-report.json \
-          ${{ inputs.docker_image }}
+          skacode/vulnado
             
      - name: Set up Python 
        if: always()
@@ -252,11 +253,12 @@ jobs:
     - name: Escanear la imagen con Trivy Client (modo servidor)
       run: |
         docker run --rm --network host \
-          -v ${{ github.workspace }}:/workspace \
-          aquasec/trivy client image \
-          --exit-code 0 --severity CRITICAL \
-          --format json -o /workspace/trivy-report-2.json \
-          ${{ steps.build_fixed.outputs.new_image }}
+          -v /home/none/vulnado/actions-runner/_work/vulnado/vulnado:/workspace \
+          aquasec/trivy client \
+          --remote http://localhost:4954 \
+          --exit-code 1 --severity CRITICAL \
+          --format json -o /workspace/trivy-report.json \
+          skacode/vulnado
 
     - name: Detener Trivy Server
       run: docker stop trivy-server-1 || true
