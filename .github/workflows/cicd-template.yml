@@ -224,7 +224,7 @@ jobs:
       id: build_fixed
       run: |
             IMAGE_NAME="${{ inputs.docker_image }}:build-${{ github.run_number }}"
-            docker build -t $IMAGE_NAME .
+            docker build --no-cache -t $IMAGE_NAME .
             echo "new_image=$IMAGE_NAME" >> $GITHUB_OUTPUT
 
     - name: Volver a escanear con Trivy
