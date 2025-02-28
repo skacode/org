@@ -139,9 +139,10 @@ jobs:
     needs: setupDefectDojo
     runs-on: self-hosted  
     steps:   
-      - name: Clonar el repositorio
-        uses: actions/checkout@v3
-        
+      - name: Mostrar effective POM
+        run: mvn help:effective-pom
+        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+
       - name: Construir la aplicación con Maven
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 
