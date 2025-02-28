@@ -90,7 +90,7 @@ jobs:
           
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-          dtrack-cli --server http://localhost:8081 --api-key ${{ secrets.DT_API_KEY }} --project-name ${{ inputs.project_name }} --project-version ${{ inputs.project_version }} --auto-create true --bom-path bom.json
+          dtrack-cli --server http://localhost:8081 --api-key ${{ secrets.DT_API_KEY }} --project-name ${{ inputs.project_name }} --project-version "1.0" --auto-create true --bom-path bom.json
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
         
       - name: Guardar hallazgos de Dependency-Track en JSON
@@ -162,29 +162,27 @@ jobs:
      - name: Verificar si Trivy está corriendo
        id: check_trivy
        run: |
-          if [ "$(docker ps -q -f name=trivy-server)" ]; then
-            echo "running=true" >> $GITHUB_ENV
-          else
-            echo "running=false" >> $GITHUB_ENV
-          fi
+        if [ "$(docker ps -q -f name=trivy-server)" ]; then
+          echo "running=true" >> $GITHUB_ENV
+        else
+          echo "running=false" >> $GITHUB_ENV
+        fi
           
-     - name: Iniciar Dependency-Track si está detenido o crear si no existe
+     - name: Iniciar Trivy Server si está detenido o crear si no existe
        if: env.running == 'false'
        run: |
-          if [ "$(docker ps -aq -f name=)" ]; then
-            docker start trivy-server
-          else
-            docker run -d \
-              -p 4954:4954 --name trivy-server \
-              aquasec/trivy server
-          fi
+        if [ "$(docker ps -aq -f name=trivy-server)" ]; then
+          docker start trivy-server
+        else
+          docker run -d -p 4954:4954 --name trivy-server aquasec/trivy server
+        fi
           
      - name: Esperar a que Trivy Server esté disponible
        run: |
-        until nc -z localhost 4954; do
-          echo "Esperando a que Trivy Server inicie..."
-          sleep 1
-        done
+          until nc -z localhost 4954; do
+            echo "Esperando a que Trivy Server inicie..."
+            sleep 1
+          done
 
      - name: Escanear la imagen con Trivy Client (modo servidor)
        run: |
