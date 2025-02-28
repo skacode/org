@@ -39,6 +39,9 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Instalar dependencias
+        run: pip install requests
+
       - name: Ejecutar script de DefectDojo desde el repo org
         id: setup
         run: python org/.github/scripts/setupdefectdojo.py
