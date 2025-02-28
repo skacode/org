@@ -96,7 +96,7 @@ def main():
             "name": "CI/CD Engagement",
             "status": "In Progress",
             "target_start": datetime.now().strftime('%Y-%m-%d'),
-            "target_end": datetime.now() + timedelta(days=dias_a_sumar).strftime('%Y-%m-%d'),
+            "target_end": datetime.now() + timedelta(days=30).strftime('%Y-%m-%d'),
             "active": True
         }
         new_engagement = requests.post(create_engagement_url, headers=headers, json=engagement_payload)
