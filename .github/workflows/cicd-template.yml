@@ -90,7 +90,7 @@ jobs:
           
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-         dtrack-cli bom upload \
+         dtrack-cli \
             --server http://localhost:8081 \
             --api-key "${{ secrets.DT_API_KEY }}" \
             --project-name "${{ inputs.project_name }}" \
@@ -181,7 +181,6 @@ jobs:
         docker run --rm --network host \
           -v ${{ github.workspace }}:/workspace \
           aquasec/trivy client image \
-          --server http://localhost:4954 \
           --exit-code 1 --severity CRITICAL \
           --format json -o /workspace/trivy-report.json \
           ${{ inputs.docker_image }}
@@ -247,7 +246,6 @@ jobs:
         docker run --rm --network host \
           -v ${{ github.workspace }}:/workspace \
           aquasec/trivy client image \
-          --server http://localhost:4954 \
           --exit-code 0 --severity CRITICAL \
           --format json -o /workspace/trivy-report-2.json \
           ${{ steps.build_fixed.outputs.new_image }}
