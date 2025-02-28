@@ -137,7 +137,7 @@ jobs:
         
       - name: Construir la aplicación con Maven
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 
           mvn clean install -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
  
