@@ -64,10 +64,10 @@ jobs:
         if: env.running == 'false'
         run: |
           if [ "$(docker ps -aq -f name=dependency-track-api)" ]; then
-            docker start dependency-track-api
+            docker start none-apiserver-1
           else
             docker run -d \
-              -p 8081:8080 --name dependency-track-api \
+              -p 8081:8080 --name none-apiserver-1 \
               dependencytrack/apiserver
           fi
  
@@ -90,13 +90,7 @@ jobs:
           
       - name: Subir SBOM a Dependency-Track con dtrack CLI
         run: |
-         dtrack-cli \
-            --server http://localhost:8081 \
-            --api-key "${{ secrets.DT_API_KEY }}" \
-            --project-name "${{ inputs.project_name }}" \
-            --project-version "1.0" \
-            --auto-create true \
-            --bom-path "bom.json"
+          dtrack-cli --server http://localhost:8081 --api-key ${{ secrets.DT_API_KEY }} --project-name ${{ inputs.project_name }} --project-version ${{ inputs.project_version }} --auto-create true --bom-path bom.json
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
         
       - name: Guardar hallazgos de Dependency-Track en JSON
@@ -165,10 +159,26 @@ jobs:
     needs: [setupDefectDojo,scanSpotbugs]
     runs-on: self-hosted  
     steps:      
-     - name: Iniciar Trivy Server
+     - name: Verificar si Trivy está corriendo
+       id: check_trivy
        run: |
-        docker run -d --rm --name trivy-server-1 -p 4954:4954 aquasec/trivy server
-
+          if [ "$(docker ps -q -f name=trivy-server)" ]; then
+            echo "running=true" >> $GITHUB_ENV
+          else
+            echo "running=false" >> $GITHUB_ENV
+          fi
+          
+     - name: Iniciar Dependency-Track si está detenido o crear si no existe
+       if: env.running == 'false'
+       run: |
+          if [ "$(docker ps -aq -f name=)" ]; then
+            docker start trivy-server
+          else
+            docker run -d \
+              -p 4954:4954 --name trivy-server \
+              aquasec/trivy server
+          fi
+          
      - name: Esperar a que Trivy Server esté disponible
        run: |
         until nc -z localhost 4954; do
