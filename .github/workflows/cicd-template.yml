@@ -54,7 +54,7 @@ jobs:
       - name: Verificar si Dependency-Track API está corriendo
         id: check_dependency_track
         run: |
-          if [ "$(docker ps -q -f name=dependency-track-api)" ]; then
+          if [ "$(docker ps -q -f name=none-apiserver-1)" ]; then
             echo "running=true" >> $GITHUB_ENV
           else
             echo "running=false" >> $GITHUB_ENV
