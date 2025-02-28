@@ -4,6 +4,7 @@ import requests
 import sys
 import subprocess
 import time
+from datetime import datetime,timedelta
 
 def check_and_start_defectdojo(api_url):
     api_key = os.environ.get("DEFECTDOJO_API_KEY")
@@ -93,7 +94,10 @@ def main():
         engagement_payload = {
             "product": product_id,
             "name": "CI/CD Engagement",
-            "status": "In Progress"
+            "status": "In Progress",
+            "target_start": datetime.now().strftime('%Y-%m-%d'),
+            "target_end": datetime.now() + timedelta(days=dias_a_sumar)).strftime('%Y-%m-%d'),
+            "active": True
         }
         new_engagement = requests.post(create_engagement_url, headers=headers, json=engagement_payload)
         new_engagement.raise_for_status()
