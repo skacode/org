@@ -145,7 +145,7 @@ jobs:
       - name: Construir la aplicación con Maven
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 
-          mvn clean install -DskipTests
+          mvn clean install -U -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
  
       - name: Construir la imagen Docker
@@ -230,7 +230,7 @@ jobs:
       run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
     - name: Etiquetar y subir imagen a DockerHub
       run: |
-         docker push ${{ needs.checkSolveVulns.outputs.new_image }}
+         docker push ${{ steps.build_fixed.outputs.new_image }}
               
   deploy:
     needs: [push]
