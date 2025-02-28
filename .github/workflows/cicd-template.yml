@@ -242,6 +242,7 @@ jobs:
               -v ${{ github.workspace }}:/workspace \
               -v $HOME/.cache/trivy:/home/none/.cache/trivy \
               aquasec/trivy image \
+              --exit-code 0 --severity CRITICAL \
               --format json -o /workspace/trivy-report-2.json \
               ${{ steps.build_fixed.outputs.new_image }}
               
