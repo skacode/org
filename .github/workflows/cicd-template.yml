@@ -198,6 +198,13 @@ jobs:
      - name: Checkout repository
        uses: actions/checkout@v3
 
+     - name: Checkout repositorio org
+       uses: actions/checkout@v3
+       with:
+          repository: skacode/org
+          ref: main
+          path: org
+
      - name: Set up Python 
        if: always()
        uses: actions/setup-python@v4
