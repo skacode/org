@@ -139,10 +139,6 @@ jobs:
     needs: setupDefectDojo
     runs-on: self-hosted  
     steps:   
-      - name: Mostrar effective POM
-        run: mvn help:effective-pom
-        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
-
       - name: Construir la aplicación con Maven
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 
@@ -182,7 +178,7 @@ jobs:
     steps:      
      - name: Iniciar Escaneo Trivy
        run: |
-         CONTAINER_NAME = trivy_scanner
+         CONTAINER_NAME=trivy_scanner
          if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME"; then
             echo "El contenedor ya existe, iniciándolo..."
             docker start $CONTAINER_NAME
