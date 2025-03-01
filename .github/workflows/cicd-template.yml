@@ -216,6 +216,8 @@ jobs:
   push:
     needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
     if: success()
+    outputs: 
+      IMAGE_NAME: ${{ steps.build_fixed.outputs.IMAGE_NAME }}
     runs-on: self-hosted
     steps:
     - name: Construir imagen corregida
@@ -240,14 +242,14 @@ jobs:
           docker rm -f ${{ inputs.project_name }} || true
  
       - name: Hacer pull de la imagen actualizada de la aplicación
-        run: docker pull skacode/dvja:build-${{ github.run_number }}
+        run: docker pull ${{ needs.push.outputs.IMAGE_NAME }}
 
       - name: Borrar caché de imagen docker
         run: docker image prune -af
  
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
-          DVJA_IMAGE: ${{ inputs.docker_image }}:${{ env.IMAGE_TAG }}
+          NAME_IMAGE: ${{ needs.push.outputs.IMAGE_NAME }}
         run: |
           docker compose up -d --force-recreate
 
