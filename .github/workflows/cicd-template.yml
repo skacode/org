@@ -178,7 +178,7 @@ jobs:
     steps:      
      - name: Iniciar Escaneo Trivy
        run: |
-         CONTAINER_NAME=trivy_scanner
+         CONTAINER_NAME=trivy_scanner${{ project_name }}
          if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME"; then
             echo "El contenedor ya existe, iniciándolo..."
             docker start $CONTAINER_NAME
@@ -189,13 +189,15 @@ jobs:
               -v ${{ github.workspace }}:/workspace \
               -v $HOME/.cache/trivy:/home/none/.cache/trivy \
               aquasec/trivy image \
-              --timeout 15m \
               --scanners vuln \
               --exit-code 0 --severity CRITICAL \
               --format json -o /workspace/trivy-report.json \
               ${{ inputs.docker_image }}
          fi
-         
+
+     - name: Checkout repository
+       uses: actions/checkout@v3
+
      - name: Set up Python 
        if: always()
        uses: actions/setup-python@v4
