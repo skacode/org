@@ -213,7 +213,8 @@ jobs:
        env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
-  solveinjection:
+  solveInjection:
+    needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
     runs-on: self-hosted
     steps:
       - name: Checkout repository
@@ -231,7 +232,7 @@ jobs:
           git commit -m "Fix SQL Injection vulnerability: Use parameterized query in UserService.java"
         
   push:
-    needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
+    needs: [solveInjection]
     if: success()
     outputs: 
       IMAGE_NAME: ${{ steps.build_fixed.outputs.IMAGE_NAME }}
