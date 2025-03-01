@@ -184,11 +184,13 @@ jobs:
             docker start $CONTAINER_NAME
          else
             echo "El contenedor no existe, ejecutándolo..."
-            docker run --rm --name $CONTAINER_NAME \
+            docker run --name $CONTAINER_NAME \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v ${{ github.workspace }}:/workspace \
               -v $HOME/.cache/trivy:/home/none/.cache/trivy \
               aquasec/trivy image \
+              --timeout 15m \
+              --scanners vuln \
               --exit-code 0 --severity CRITICAL \
               --format json -o /workspace/trivy-report.json \
               ${{ inputs.docker_image }}
