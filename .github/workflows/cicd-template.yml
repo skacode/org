@@ -182,8 +182,8 @@ jobs:
     steps:      
      - name: Iniciar Escaneo Trivy
        run: |
-         $CONTAINER_NAME = trivy_scanner
-         if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
+         CONTAINER_NAME = trivy_scanner
+         if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME"; then
             echo "El contenedor ya existe, iniciándolo..."
             docker start $CONTAINER_NAME
          else
