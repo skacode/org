@@ -251,9 +251,11 @@ jobs:
   
       - name: Replace string in the file if a match is found
         run: |
-          sed -i "s|${{ inputs.string_to_replace }}|${{ inputs.string_replacement }}|g" "${{ inputs.file_to_patch }}"
+          STRING_TO_REPLACE=$(printf %s '${{ inputs.string_to_replace }}' | sed 's/[.[\*^$/]/\\&/g')
+          STRING_REPLACEMENT=$(printf %s '${{ inputs.string_replacement }}' | sed 's/[.[\*^$/]/\\&/g')
+          sed -i "s|$STRING_TO_REPLACE|$STRING_REPLACEMENT|g" "${{ inputs.file_to_patch }}"
         shell: bash
-      
+
       - name: Commit local del parche
         run: |
           git config --global user.name "github-actions"
