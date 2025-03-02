@@ -20,15 +20,15 @@ on:
         required: true
         type: string
       file_to_patch:
-        description: "File to patch on solveVuln's Job"
+        description: "Archivo a parchear en el Job solveVuln"
         required: false
         type: string
       string_to_replace: 
-        description: "Code line to replace"
+        description: "Línea de código a remplazar"
         required: false
         type: string
       string_replacement: 
-        description: "Code line replacement"
+        description: "Remplazo de línea de código"
         required: false
         type: string
       
@@ -251,7 +251,7 @@ jobs:
   
       - name: Sustituir en el archivo si hay coincidencia
         run: |
-          sed -i "s|${{ inputs.string_to_replace }}|${{ inputs.string_replacement }}|g" "${{ inputs.file_to_patch }}"
+          sed -i 's|'"${{ inputs.string_to_replace }}"'|'"${{ inputs.string_replacement }}"'|g' "${{ inputs.file_to_patch }}"
       
       - name: Commit local del parche
         run: |
