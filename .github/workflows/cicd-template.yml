@@ -331,6 +331,20 @@ jobs:
     runs-on: self-hosted  
     if: success()
     steps:
+      - name: Esperar a que la aplicación esté disponible
+        run: |
+          max_attempts=12
+          count=1
+          until curl -s --fail "${{ inputs.app_url }}" > /dev/null; do
+            if [ $count -gt $max_attempts ]; then
+              echo "La aplicación no se encuentra disponible tras $((max_attempts*5)) segundos. Abortando."
+              exit 1
+            fi
+            echo "Intento $count: La aplicación no está disponible, reintentando en 5 segundos..."
+            count=$((count+1))
+            sleep 5
+          done
+          
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
           docker run --rm -v $(pwd):/zap/wrk:rw --network=host \
