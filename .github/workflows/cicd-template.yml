@@ -155,7 +155,7 @@ jobs:
           
       - name: Construir la aplicación con Maven
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 
+          export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
           mvn clean install -U -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
  
@@ -292,9 +292,6 @@ jobs:
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
           docker rm -f ${{ inputs.docker_image  }} || true
-
-      - name: Borrar caché de imagen docker
-        run: docker image prune -af
  
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}:build-${{ github.run_number }}
