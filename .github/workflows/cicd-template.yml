@@ -317,7 +317,7 @@ jobs:
           
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
-          NAME_IMAGE: ${{ inputs.docker_image }}:build-${{ github.run_number }}
+          IMAGE_NAME: ${{ inputs.docker_image }}:build-${{ github.run_number }}
         run: |
           docker compose -f docker-compose.yml up -d --force-recreate
           
