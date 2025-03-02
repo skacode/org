@@ -62,6 +62,9 @@ jobs:
     needs: setupDefectDojo
     runs-on: self-hosted  
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
       - name: Checkout repositorio org
         uses: actions/checkout@v3
         with:
@@ -147,6 +150,9 @@ jobs:
     needs: setupDefectDojo
     runs-on: self-hosted  
     steps:   
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
       - name: Refrescar directorio Git
         run: |
           git remote set-url origin https://github.com/${{ inputs.docker_image }}.git
