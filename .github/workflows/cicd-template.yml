@@ -249,6 +249,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
+        with:
+           repository: skacode/org
+           ref: main
+           path: org
+
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
@@ -256,7 +263,7 @@ jobs:
         
       - name: Uso de script en python para solventar Vuln
         run: |
-          python replace_vuln.py \
+          python  org/.github/scripts/replace_vuln.py \
             "${{ inputs.file_to_patch }}" \
             "${{ inputs.string_to_replace }}" \
             "${{ inputs.string_replacement }}"
