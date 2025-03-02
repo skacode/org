@@ -249,13 +249,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         
-      - name: Replace string in the file using Perl (Better Handling)
+      - name: Replace string in the file using Perl (Correct Handling)
         run: |
-          STRING_TO_REPLACE="${{ inputs.string_to_replace }}"
-          STRING_REPLACEMENT="${{ inputs.string_replacement }}"
-          FILE_PATH="${{ inputs.file_to_patch }}"
-          
-          perl -pi -e "s#\Q$STRING_TO_REPLACE\E#$STRING_REPLACEMENT#g" \"$FILE_PATH\"
+          STRING_TO_REPLACE=${{ inputs.string_to_replace }}
+          STRING_REPLACEMENT=${{ inputs.string_replacement }}
+          FILE_PATH=${{ inputs.file_to_patch }}
+  
+          # Escapar comillas dobles dentro de las variables
+          STRING_TO_REPLACE_ESCAPED=$(printf "%s" "$STRING_TO_REPLACE" | sed 's/"/\\"/g')
+          STRING_REPLACEMENT_ESCAPED=$(printf "%s" "$STRING_REPLACEMENT" | sed 's/"/\\"/g')
+  
+          # Ejecutar Perl con variables bien formateadas
+          perl -pi -e "s#\Q$STRING_TO_REPLACE_ESCAPED\E#$STRING_REPLACEMENT_ESCAPED#g" "$FILE_PATH"
         shell: bash
 
       - name: Commit local del parche
