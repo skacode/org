@@ -248,27 +248,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
-      - name: Replace string in the file using Perl (Correct Handling)
-        run: |
-          STRING_TO_REPLACE=${{ inputs.string_to_replace }}
-          STRING_REPLACEMENT=${{ inputs.string_replacement }}
-          FILE_PATH=${{ inputs.file_to_patch }}
-  
-          # Escapar comillas dobles dentro de las variables
-          STRING_TO_REPLACE_ESCAPED=$(printf "%s" "$STRING_TO_REPLACE" | sed 's/"/\\"/g')
-          STRING_REPLACEMENT_ESCAPED=$(printf "%s" "$STRING_REPLACEMENT" | sed 's/"/\\"/g')
-  
-          # Ejecutar Perl con variables bien formateadas
-          perl -pi -e "s#\Q$STRING_TO_REPLACE_ESCAPED\E#$STRING_REPLACEMENT_ESCAPED#g" "$FILE_PATH"
-        shell: bash
 
-      - name: Commit local del parche
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+        
+      - name: Uso de script en python para solventar Vuln
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add "${{ inputs.file_to_patch }}"
-          git commit -m "VulnUpdate"
+          python replace_vuln.py \
+            "${{ inputs.file_to_patch }}" \
+            "${{ inputs.string_to_replace }}" \
+            "${{ inputs.string_replacement }}"
+        shell: bash
         
   push:
     needs: [solveVuln]
