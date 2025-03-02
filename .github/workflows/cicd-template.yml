@@ -274,7 +274,13 @@ jobs:
         
       - name: Borrar caché de imagen docker
         run: docker image prune -af
- 
+
+      - name: Refrescar directorio Git
+        run: |
+          git remote set-url origin https://github.com/${{ inputs.docker_image }}.git
+          git fetch origin
+          git reset --hard origin/master
+          
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
           NAME_IMAGE: ${{ inputs.docker_image }}:build-${{ github.run_number }}
