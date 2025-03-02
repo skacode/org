@@ -338,8 +338,8 @@ jobs:
             --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap-baseline.py \
             -t ${{ inputs.app_url }} \
-            -quickout /zap/work/zap-report.xml \
-            -config scanner.maxScanDurationInMins=2 
+            -x /zap/work/zap-report.xml \
+            -m 2
 
       - name: Set up Python 
         uses: actions/setup-python@v4
