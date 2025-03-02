@@ -303,8 +303,7 @@ jobs:
     runs-on: self-hosted  
     steps:        
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
-        run: |
-          docker rm -f ${{ inputs.docker_image  }} || true
+        run: IMAGE_NAME=${{ inputs.docker_image }} docker compose down || true
  
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}:build-${{ github.run_number }}
@@ -338,7 +337,7 @@ jobs:
             --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap-baseline.py \
             -t ${{ inputs.app_url }} \
-            -x /zap/work/zap-report.xml \
+            -x /zap/wrk/zap-report.xml \
             -m 2
 
       - name: Set up Python 
