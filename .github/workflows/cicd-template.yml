@@ -23,12 +23,8 @@ on:
         description: "Archivo a parchear en el Job solveVuln"
         required: false
         type: string
-      string_to_replace: 
+      file_content_replacement:
         description: "Línea de código a remplazar"
-        required: false
-        type: string
-      string_replacement: 
-        description: "Remplazo de línea de código"
         required: false
         type: string
       
@@ -243,31 +239,31 @@ jobs:
           
   solveVuln:
     needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
-    if: ${{ inputs.file_to_patch != '' || inputs.string_to_replace != '' || inputs.string_replacement != '' }}
+    if: ${{ inputs.file_to_patch != '' || inputs.file_content_replacement != '' }}
     runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Checkout repositorio org
-        uses: actions/checkout@v3
-        with:
-           repository: skacode/org
-           ref: main
-           path: org
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.x'
-
-      - name: Run Python Script to Replace Vulnerable Code
+      - name: File Replacement Vulnerability
         run: |
-          python3 org/.github/scripts/replace_vuln.py \
-            "${{ inputs.file_to_patch }}" \
-            "${{ inputs.string_to_replace }}" \
-            "${{ inputs.string_replacement }}"
-        shell: bash
+          FILE_TO_PATCH="${{ inputs.file_to_patch }}"
+          FILE_CONTENT_REPLACEMENT="${{ inputs.file_content_replacement }}"
+          if [ -f "$FILE_TO_PATCH" ]; then
+            rm -f "$FILE_TO_PATCH"
+            echo "Archivo eliminado: $FILE_TO_PATCH"
+          else
+            echo "El archivo $FILE_TO_PATCH no existía previamente."
+          fi
+          cp "$FILE_CONTENT_REPLACEMENT" "$FILE_TO_PATCH"
+          echo "Archivo reemplazado correctamente con $FILE_CONTENT_REPLACEMENT"
+
+      - name: Commit local del parche
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add "${{ inputs.file_to_patch }}"
+          git commit -m "VulnUpdate"
         
   push:
     needs: [solveVuln]
