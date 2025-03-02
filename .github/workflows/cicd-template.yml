@@ -334,7 +334,7 @@ jobs:
     steps:
       - name: Ejecutar escaneo rápido con OWASP ZAP
         run: |
-          docker run --rm -v $(pwd):/zap/work:rw --network=host \
+          docker run --rm -v $(pwd):/zap/wrk:rw --network=host \
             --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap-baseline.py \
             -t ${{ inputs.app_url }} \
