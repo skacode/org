@@ -4,13 +4,13 @@ def replace_in_file(file_path, string_to_replace, string_replacement):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             content = file.read()
-        new_content = content.replace(string_to_replace, string_replacement)
-        if new_content == content:
-            print("No se encontró la cadena a reemplazar. No se hicieron cambios.")
-        else:
+        if string_to_replace in content:
+            content = content.replace(string_to_replace, string_replacement)
             with open(file_path, "w", encoding="utf-8") as file:
-                file.write(new_content)
+                file.write(content)
             print("Reemplazo realizado correctamente.")
+        else:
+            print("No se encontró la cadena a reemplazar. No se hicieron cambios.")
 
     except Exception as e:
         print(f"Error al modificar el archivo: {e}")
