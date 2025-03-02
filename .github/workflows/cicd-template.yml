@@ -139,6 +139,12 @@ jobs:
     needs: setupDefectDojo
     runs-on: self-hosted  
     steps:   
+      - name: Refrescar directorio Git
+        run: |
+          git remote set-url origin https://github.com/${{ inputs.docker_image }}.git
+          git fetch origin
+          git reset --hard origin/master
+          
       - name: Construir la aplicación con Maven
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 
