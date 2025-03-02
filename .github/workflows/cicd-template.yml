@@ -176,27 +176,30 @@ jobs:
     needs: [setupDefectDojo,scanSpotbugs]
     runs-on: self-hosted  
     steps:      
-     - name: Iniciar Escaneo Trivy
+     - name: Pre-popular DB de Trivy en cache
        run: |
-         CONTAINER_NAME=trivy_scanner${{ inputs.project_name }}
-         if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME"; then
-            echo "El contenedor ya existe, iniciándolo..."
-            docker start $CONTAINER_NAME
-         else
-            echo "El contenedor no existe, ejecutándolo..."
-            docker run --name $CONTAINER_NAME \
+          if [ ! -f "$HOME/.trivy/trivy.db" ]; then
+            echo "No se encontró la base de datos en cache, descargándola..."
+            mkdir -p $HOME/.trivy
+            docker run --rm --user $(id -u):$(id -g) \
               -v /var/run/docker.sock:/var/run/docker.sock \
-              -v ${{ github.workspace }}:/workspace \
-              -v $HOME/.cache/trivy:/home/none/.cache/trivy \
-              aquasec/trivy image \
-              --scanners vuln \
-              --exit-code 0 --severity CRITICAL \
-              --format json -o /workspace/trivy-report.json \
-              ${{ inputs.docker_image }}
-         fi
+              -v $HOME/.trivy:/home/agent/.trivy \
+              aquasec/trivy image --download-db-only --cache-dir /home/agent/.trivy {{ inputs.docker_image }}
+          else
+            echo "Base de datos en cache encontrada, usándola."
+          fi
 
-     - name: Checkout repository
-       uses: actions/checkout@v3
+     - name: Iniciar Escaneo Trivy usando cache persistente
+       run: |
+        docker run --rm --user $(id -u):$(id -g) \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v ${{ github.workspace }}:/workspace \
+          -v $HOME/.trivy:/home/agent/.trivy \
+          aquasec/trivy image --cache-dir /home/agent/.trivy \
+          --scanners vuln --skip-db-update \
+          --exit-code 0 --severity CRITICAL \
+          --format json -o /workspace/trivy-report.json \
+          ${{ inputs.docker_image }}
 
      - name: Checkout repositorio org
        uses: actions/checkout@v3
@@ -206,13 +209,11 @@ jobs:
           path: org
 
      - name: Set up Python 
-       if: always()
        uses: actions/setup-python@v4
        with:
           python-version: '3.x'
           
      - name: Upload Trivy Report to DefectDojo
-       if: always()
        run: |
           python org/.github/scripts/uploadtodojo.py \
             --scan_type "Trivy Scan" \
@@ -222,7 +223,7 @@ jobs:
        env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 
-  solveInjection:
+  solveVuln:
     needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
     runs-on: self-hosted
     steps:
@@ -241,7 +242,7 @@ jobs:
           git commit -m "Fix SQL Injection vulnerability: Use parameterized query in UserService.java"
         
   push:
-    needs: [solveInjection]
+    needs: [solveVuln]
     if: success()
     outputs: 
       IMAGE_NAME: ${{ steps.build_fixed.outputs.IMAGE_NAME }}
