@@ -260,10 +260,10 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: '3.x'
-        
-      - name: Uso de script en python para solventar Vuln
+
+      - name: Run Python Script to Replace Vulnerable Code
         run: |
-          python  org/.github/scripts/replace_vuln.py \
+          python3 org/.github/scripts/replace_vuln.py \
             "${{ inputs.file_to_patch }}" \
             "${{ inputs.string_to_replace }}" \
             "${{ inputs.string_replacement }}"
