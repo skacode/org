@@ -337,7 +337,7 @@ jobs:
             --memory=1g --cpus=1 \
             -t zaproxy/zap-stable zap-baseline.py \
             -t ${{ inputs.app_url }} \
-            -x /zap/wrk/zap-report.xml \
+            -x zap-report.xml \
             -m 2
 
       - name: Set up Python 
