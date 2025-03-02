@@ -244,22 +244,16 @@ jobs:
   push:
     needs: [solveVuln]
     if: success()
-    outputs: 
-      IMAGE_NAME: ${{ steps.build_fixed.outputs.IMAGE_NAME }}
     runs-on: self-hosted
     steps:
     - name: Construir imagen corregida
-      id: build_fixed
-      run: |
-            IMAGE_NAME="${{ inputs.docker_image }}:build-${{ github.run_number }}"
-            docker build --no-cache -t $IMAGE_NAME .
-            echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_OUTPUT
+      run: docker build --no-cache -t ${{ inputs.docker_image }}:build-${{ github.run_number }} .
 
     - name: Iniciar sesión en DockerHub
       run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
     - name: Etiquetar y subir imagen a DockerHub
       run: |
-         docker push ${{ steps.build_fixed.outputs.IMAGE_NAME }}
+         docker push ${{ inputs.docker_image }}:build-${{ github.run_number }}
               
   deploy:
     needs: [push]
@@ -267,17 +261,17 @@ jobs:
     steps:        
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
-          docker rm -f ${{ inputs.project_name }} || true
+          docker rm -f ${{ inputs.docker_image  }} || true
  
       - name: Hacer pull de la imagen actualizada de la aplicación
-        run: docker pull ${{ needs.push.outputs.IMAGE_NAME }}
-
+        run: docker pull ${{ inputs.docker_image }}:build-${{ github.run_number }}
+        
       - name: Borrar caché de imagen docker
         run: docker image prune -af
  
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
-          NAME_IMAGE: ${{ needs.push.outputs.IMAGE_NAME }}
+          NAME_IMAGE: ${{ inputs.docker_image }}:build-${{ github.run_number }}
         run: |
           docker compose up -d --force-recreate
 
