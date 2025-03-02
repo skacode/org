@@ -245,6 +245,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
       - name: File Replacement Vulnerability
         run: |
           FILE_TO_PATCH="${{ inputs.file_to_patch }}"
