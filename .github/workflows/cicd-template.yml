@@ -292,12 +292,12 @@ jobs:
       - name: Verificar si la aplicación ya está en ejecución y eliminarla
         run: |
           docker rm -f ${{ inputs.docker_image  }} || true
+
+      - name: Borrar caché de imagen docker
+        run: docker image prune -af
  
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}:build-${{ github.run_number }}
-        
-      - name: Borrar caché de imagen docker
-        run: docker image prune -af
 
       - name: Refrescar directorio Git
         run: |
