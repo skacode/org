@@ -19,7 +19,19 @@ on:
         description: "URL de la aplicación"
         required: true
         type: string
-
+      file_to_patch:
+        description: "File to patch on solveVuln's Job"
+        required: false
+        type: string
+      string_to_replace: 
+        description: "Code line to replace"
+        required: false
+        type: string
+      string_replacement: 
+        description: "Code line replacement"
+        required: false
+        type: string
+      
 jobs:
   setupDefectDojo:
     runs-on: self-hosted
@@ -228,24 +240,25 @@ jobs:
             --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
        env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-
+          
   solveVuln:
     needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
+    if: ${{ inputs.file_to_patch != '' || inputs.string_to_replace != '' || inputs.string_replacement != '' }}
     runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Solventar SQL Injection reemplazando por consulta parametrizada
+  
+      - name: Sustituir en el archivo si hay coincidencia
         run: |
-          sed -i 's|entityManager.createQuery("SELECT u FROM User u WHERE u.login = '\''" + login + "'\''")|entityManager.createQuery("SELECT u FROM User u WHERE u.login = :login").setParameter("login", login)|' src/main/java/com/appsecco/dvja/services/UserService.java
-
-      - name: Realizar los cambios localmente para poder comparar el parche
+          sed -i "s|${{ inputs.string_to_replace }}|${{ inputs.string_replacement }}|g" "${{ inputs.file_to_patch }}"
+      
+      - name: Commit local del parche
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add src/main/java/com/appsecco/dvja/services/UserService.java
-          git commit -m "Fix SQL Injection vulnerability: Use parameterized query in UserService.java"
+          git add "${{ inputs.file_to_patch }}"
+          git commit -m "Automatic patch: replaced '${{ inputs.string_to_replace }}' with '${{ inputs.string_replacement }}'"
         
   push:
     needs: [solveVuln]
@@ -285,8 +298,8 @@ jobs:
         env:
           NAME_IMAGE: ${{ inputs.docker_image }}:build-${{ github.run_number }}
         run: |
-          docker compose up -d --force-recreate .
-
+          docker compose -f docker-compose.yml up -d --force-recreate
+          
       - name: Limitar recursos de los contenedores en ejecución
         run: |
           for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
