@@ -279,7 +279,7 @@ jobs:
         env:
           NAME_IMAGE: ${{ inputs.docker_image }}:build-${{ github.run_number }}
         run: |
-          docker compose up -d --force-recreate
+          docker compose up -d --force-recreate .
 
       - name: Limitar recursos de los contenedores en ejecución
         run: |
