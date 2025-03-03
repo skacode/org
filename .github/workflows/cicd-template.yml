@@ -163,11 +163,6 @@ jobs:
           export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
           mvn clean install -U -DskipTests
         working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
- 
-      - name: Construir la imagen Docker
-        run: |
-          docker build -t ${{ inputs.docker_image }} .
-        working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
         
       - name: Escanear código con SpotBugs + FindSecBugs (SAST)
         run: |
@@ -264,12 +259,6 @@ jobs:
  
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}:run-${{ github.run_number }}
-
-      #- name: Refrescar directorio Git
-        #run: |
-          #git remote set-url origin https://github.com/${{ inputs.docker_image }}.git
-          #git fetch origin
-          #git reset --hard origin/master
           
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
