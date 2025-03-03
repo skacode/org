@@ -19,14 +19,6 @@ on:
         description: "URL de la aplicación"
         required: true
         type: string
-      file_to_patch:
-        description: "Archivo a parchear en el Job solveVuln"
-        required: false
-        type: string
-      file_content_replacement:
-        description: "Línea de código a remplazar"
-        required: false
-        type: string
       
 jobs:
   setupDefectDojo:
@@ -249,54 +241,19 @@ jobs:
             --product_id "${{ needs.SetupDefectDojo.outputs.product_id }}"
        env:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-          
-  solveVuln:
-    needs: [scanTrivy, scanDependencyTrack, scanSpotbugs]
-    if: ${{ inputs.file_to_patch != '' || inputs.file_content_replacement != '' }}
-    runs-on: self-hosted
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Checkout repositorio org
-        uses: actions/checkout@v3
-        with:
-          repository: skacode/org
-          ref: main
-          path: org
-
-      - name: File Replacement Vulnerability
-        run: |
-          FILE_TO_PATCH="${{ inputs.file_to_patch }}"
-          FILE_CONTENT_REPLACEMENT="${{ inputs.file_content_replacement }}"
-          if [ -f "$FILE_TO_PATCH" ]; then
-            rm -f "$FILE_TO_PATCH"
-            echo "Archivo eliminado: $FILE_TO_PATCH"
-          else
-            echo "El archivo $FILE_TO_PATCH no existía previamente."
-          fi
-          cp "$FILE_CONTENT_REPLACEMENT" "$FILE_TO_PATCH"
-          echo "Archivo reemplazado correctamente con $FILE_CONTENT_REPLACEMENT"
-
-      - name: Commit local del parche
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add "${{ inputs.file_to_patch }}"
-          git commit -m "VulnUpdate"
         
   push:
-    needs: [solveVuln]
+    needs: [scanSpotbugs, scanTrivy, scanDependencyTrack]
     runs-on: self-hosted
     steps:
     - name: Reconstrucción de imagen
-      run: docker build --no-cache -t ${{ inputs.docker_image }}:build-${{ github.run_number }} .
+      run: docker build --no-cache -t ${{ inputs.docker_image }}:run-${{ github.run_number }} .
 
     - name: Iniciar sesión en DockerHub
       run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
     - name: Etiquetar y subir imagen a DockerHub
       run: |
-         docker push ${{ inputs.docker_image }}:build-${{ github.run_number }}
+         docker push ${{ inputs.docker_image }}:run-${{ github.run_number }}
               
   deploy:
     needs: [push]
@@ -306,7 +263,7 @@ jobs:
         run: IMAGE_NAME=${{ inputs.docker_image }} docker compose down || true
  
       - name: Hacer pull de la imagen actualizada de la aplicación
-        run: docker pull ${{ inputs.docker_image }}:build-${{ github.run_number }}
+        run: docker pull ${{ inputs.docker_image }}:run-${{ github.run_number }}
 
       - name: Refrescar directorio Git
         run: |
@@ -316,7 +273,7 @@ jobs:
           
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
-          IMAGE_NAME: ${{ inputs.docker_image }}:build-${{ github.run_number }}
+          IMAGE_NAME: ${{ inputs.docker_image }}:run-${{ github.run_number }}
         run: |
           docker compose -f docker-compose.yml up -d --force-recreate
           
@@ -333,7 +290,7 @@ jobs:
     steps:
       - name: Esperar a que la aplicación esté disponible
         run: |
-          max_attempts=12
+          max_attempts=24
           count=1
           until curl -s --fail "${{ inputs.app_url }}" > /dev/null; do
             if [ $count -gt $max_attempts ]; then
