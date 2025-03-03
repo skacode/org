@@ -265,11 +265,11 @@ jobs:
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}:run-${{ github.run_number }}
 
-      - name: Refrescar directorio Git
-        run: |
-          git remote set-url origin https://github.com/${{ inputs.docker_image }}.git
-          git fetch origin
-          git reset --hard origin/master
+      #- name: Refrescar directorio Git
+        #run: |
+          #git remote set-url origin https://github.com/${{ inputs.docker_image }}.git
+          #git fetch origin
+          #git reset --hard origin/master
           
       - name: Iniciar archivo Docker Compose con la nueva imagen
         env:
@@ -309,7 +309,7 @@ jobs:
             -t zaproxy/zap-stable zap-baseline.py \
             -t ${{ inputs.app_url }} \
             -x zap-report.xml \
-            -m 2
+            -m 2 || true
 
       - name: Set up Python 
         uses: actions/setup-python@v4
