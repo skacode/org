@@ -247,7 +247,7 @@ jobs:
       run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
     - name: Etiquetar y subir imagen a DockerHub
       run: |
-         docker push ${{ inputs.docker_image }}:run-${{ github.run_number }}
+         docker push ${{ inputs.docker_image }}:run-${{ github.run_number }}.0
               
   deploy:
     needs: [push]
