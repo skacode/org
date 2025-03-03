@@ -152,12 +152,6 @@ jobs:
           ref: main
           path: org
         
-      - name: Refrescar directorio Git
-        run: |
-          git remote set-url origin https://github.com/${{ inputs.docker_image }}.git
-          git fetch origin
-          git reset --hard origin/master
-          
       - name: Construir la aplicación con Maven
         run: |
           export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
@@ -190,6 +184,11 @@ jobs:
     needs: [setupDefectDojo,scanSpotbugs]
     runs-on: self-hosted  
     steps:      
+     - name: Construir la imagen Docker
+       run: |
+          docker build -t ${{ inputs.docker_image }}:run-${{ github.run_number }} .
+       working-directory: ${{ github.workspace }}/${{ inputs.working_directory }}
+       
      - name: Pre-popular DB de Trivy en cache
        run: |
           if [ ! -f "$HOME/.trivy/trivy.db" ]; then
@@ -198,7 +197,7 @@ jobs:
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v $HOME/.trivy:/home/agent/.trivy \
-              aquasec/trivy image --download-db-only --cache-dir /home/agent/.trivy {{ inputs.docker_image }}
+              aquasec/trivy image --download-db-only --cache-dir /home/agent/.trivy ${{ inputs.docker_image }}:run-${{ github.run_number }}
           else
             echo "Base de datos en cache encontrada, usándola."
           fi
@@ -213,7 +212,7 @@ jobs:
           --scanners vuln --skip-db-update \
           --exit-code 0 --severity CRITICAL \
           --format json -o /workspace/trivy-report.json \
-          ${{ inputs.docker_image }}
+          ${{ inputs.docker_image }}:run-${{ github.run_number }}
 
      - name: Checkout repositorio org
        uses: actions/checkout@v3
@@ -242,7 +241,7 @@ jobs:
     runs-on: self-hosted
     steps:
     - name: Reconstrucción de imagen
-      run: docker build --no-cache -t ${{ inputs.docker_image }}:run-${{ github.run_number }} .
+      run: docker build --no-cache -t ${{ inputs.docker_image }}:run-${{ github.run_number }}.0 .
 
     - name: Iniciar sesión en DockerHub
       run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
