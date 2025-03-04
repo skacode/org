@@ -294,14 +294,17 @@ jobs:
           export USER_SECRET="${{ secrets.USER_SECRET }}"
           export PASSWORD_SECRET="${{ secrets.PASSWORD_SECRET }}"
           envsubst < manifests-${{ inputs.project_name }}/secret.yaml > manifests-${{ inputs.project_name }}/secret-final.yaml
+          kubectl apply -f manifests-${{ inputs.project_name }}/secret-final.yaml -n training
 
       - name: Sustituir valores en deployment-project.yaml antes de aplicar
         run: |
           export IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image }}:run-${{ github.run_number }}.0"
           envsubst < manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}.yaml > manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}-final.yaml
+          kubectl apply -f manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}-final.yaml -n training
           
       - name: Aplicar los manifests en Kubernetes
-        run: kubectl apply -f manifests-${{ inputs.project_name }}/ -n training          
+        run: |
+          kubectl apply -f manifests-${{ inputs.project_name }}/nochanges/ -n training  
       
       - name: Actualizar imagen del proyecto en Kubernetes
         run: kubectl rollout status deployment/${{ inputs.project_name }} -n training
