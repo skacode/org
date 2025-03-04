@@ -260,6 +260,7 @@ jobs:
         run: |
           curl -sSL -o kubeval.tar.gz https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
           tar -xvf kubeval.tar.gz
+          mkdir -p $HOME/bin
           mv kubeval $HOME/bin/
           export PATH=$HOME/bin:$PATH
           kubeval -d manifests-dvja/ || { echo "Error: YAML no válido. Abortando el despliegue."; exit 1; }
