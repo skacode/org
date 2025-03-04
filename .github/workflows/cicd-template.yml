@@ -75,14 +75,8 @@ jobs:
           
       - name: Iniciar Dependency-Track si está detenido o crear si no existe
         if: env.running == 'false'
-        run: |
-          if [ "$(docker ps -aq -f name=dt-apiserver-1)" ]; then
-            docker start dt-apiserver-1
-          else
-            docker run -d \
-              -p 8081:8080 --name dt-apiserver-1 \
-              dependencytrack/apiserver
-          fi
+        run: docker compose up -d
+        working-directory: "/home/none/dt"
  
       - name: Esperar a que Dependency-Track esté operativo
         run: |
