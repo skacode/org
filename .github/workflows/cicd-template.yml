@@ -263,7 +263,7 @@ jobs:
           mkdir -p $HOME/bin
           mv kubeval $HOME/bin/
           export PATH=$HOME/bin:$PATH
-          kubeval -d manifests-dvja/ || { echo "Error: YAML no válido. Abortando el despliegue."; exit 1; }
+          kubeval -d manifests-${{ inputs-project_name }}/ || { echo "Error: YAML no válido. Abortando el despliegue."; exit 1; }
 
       - name: Validar seguridad de YAML con kubesec
         run: |
@@ -272,7 +272,7 @@ jobs:
           chmod +x kubesec
           mv kubesec $HOME/bin/
           export PATH=$HOME/bin:$PATH
-          kubesec scan manifests-dvja/*.yaml | tee kubesec-output.json
+          kubesec scan manifests-${{ inputs.project_name }}/*.yaml | tee kubesec-output.json
           
           if grep -q '"score": [0-9]\+' kubesec-output.json; then
             MIN_SCORE=$(jq '[.[] | .score] | min' kubesec-output.json)
@@ -284,33 +284,33 @@ jobs:
             echo "Error: No se pudo evaluar la seguridad con kubesec."
             exit 1
           fi
-
-      - name: Sustituir Secrets en los YAML antes de aplicar
-        run: |
-          export ROOT_SECRET=$(echo -n "${{ secrets.ROOT_SECRET }}" | base64)
-          export USER_SECRET=$(echo -n "${{ secrets.USER_SECRET }}" | base64)
-          export PASSWORD_SECRET=$(echo -n "${{ secrets.PASSWORD_SECRET }}" | base64)
-          envsubst < manifests-dvja/secret.yaml > manifests-dvja/secret-final.yaml
-
-      - name: Aplicar los manifests en Kubernetes
-        run: |
-          kubectl apply -f manifests-dvja/ -n training
-
+      
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}:run-${{ github.run_number }}.0
-      
-      - name: Actualizar imagen de DVJA en Kubernetes
+
+      - name: Sustituir valores en secret.yaml antes de aplicar
+        run: |
+          export ROOT_SECRET="${{ secrets.ROOT_SECRET }}"
+          export USER_SECRET="${{ secrets.USER_SECRET }}"
+          export PASSWORD_SECRET="${{ secrets.PASSWORD_SECRET }}"
+          envsubst < manifests-${{ inputs.project_name }}/secret.yaml > manifests-${{ inputs.project_name }}/secret-final.yaml
+
+      - name: Sustituir valores en deployment-project.yaml antes de aplicar
         run: |
           export IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image }}:run-${{ github.run_number }}.0"
-          kubectl set env deployment/dvja IMAGE_NAME=$IMAGE_NAME -n training
-          kubectl set image deployment/dvja dvja=$IMAGE_NAME -n training
-          kubectl rollout status deployment/dvja -n training
+          envsubst < manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}.yaml > manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}-final.yaml
+          
+      - name: Aplicar los manifests en Kubernetes
+        run: kubectl apply -f manifests-${{ inputs.project_name }}/ -n training          
+      
+      - name: Actualizar imagen del proyecto en Kubernetes
+        run: kubectl rollout status deployment/${{ inputs.project_name }} -n training
           
       - name: Esperar a que la aplicación esté completamente desplegada
         run: |
           max_attempts=20
           count=1
-          until kubectl get pods -n training | grep dvja | grep "1/1" | grep "Running"; do
+          until kubectl get pods -n training | grep ${{ inputs.project_name }} | grep "1/1" | grep "Running"; do
             if [ $count -gt $max_attempts ]; then
               echo "La aplicación no se encuentra en estado Running tras $((max_attempts*5)) segundos. Abortando."
               exit 1
@@ -319,11 +319,11 @@ jobs:
             count=$((count+1))
             sleep 5
           done
-          echo "DVJA está completamente desplegado."
+          echo "Aplicación completamente desplegada."
 
-      - name: Configurar Port Forwarding para DVJA en segundo plano
+      - name: Configurar Port Forwarding para la Aplicación en segundo plano
         run: |
-          nohup kubectl port-forward -n training svc/dvja 7070:80 > dvja-portforward.log 2>&1 &
+          nohup kubectl port-forward -n training svc/${{ inputs.projectname }} 7070:80 > {{ inputs.projectname }}-portforward.log 2>&1 &
         
   scanZap:
     needs: [deploy,setupDefectDojo]
