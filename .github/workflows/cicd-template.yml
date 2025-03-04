@@ -248,29 +248,81 @@ jobs:
     - name: Etiquetar y subir imagen a DockerHub
       run: |
          docker push ${{ inputs.docker_image }}:run-${{ github.run_number }}.0
-              
+         
   deploy:
     needs: [push]
-    runs-on: self-hosted  
+    runs-on: self-hosted
     steps:        
-      - name: Verificar si la aplicación ya está en ejecución y eliminarla
-        run: IMAGE_NAME=${{ inputs.docker_image }} docker compose down || true
- 
-      - name: Hacer pull de la imagen actualizada de la aplicación
-        run: docker pull ${{ inputs.docker_image }}:run-${{ github.run_number }}
-          
-      - name: Iniciar archivo Docker Compose con la nueva imagen
-        env:
-          IMAGE_NAME: ${{ inputs.docker_image }}:run-${{ github.run_number }}
+      - name: Configurar kubectl
         run: |
-          docker compose -f docker-compose.yml up -d --force-recreate
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
+          export KUBECONFIG=kubeconfig
           
-      - name: Limitar recursos de los contenedores en ejecución
+      - name: Validar YAMLs con kubeval
         run: |
-          for container in $(docker ps --format "{{.Names}}" --filter "name=${{ inputs.project_name }}"); do
-            docker update --memory=512m --memory-swap=1g --cpus=0.5 "$container"
-          done
+          curl -sSL -o kubeval.tar.gz https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar -xvf kubeval.tar.gz
+          sudo mv kubeval /usr/local/bin/
+          kubeval -d manifests-dvja/ || { echo "Error: YAML no válido. Abortando el despliegue."; exit 1; }
 
+      - name: Validar seguridad de YAML con kubesec
+        run: |
+          curl -sSL -o kubesec https://github.com/controlplaneio/kubesec/releases/latest/download/kubesec-linux-amd64
+          chmod +x kubesec
+          sudo mv kubesec /usr/local/bin/
+          kubesec scan manifests-dvja/*.yaml | tee kubesec-output.json
+          
+          if grep -q '"score": [0-9]\+' kubesec-output.json; then
+            MIN_SCORE=$(jq '[.[] | .score] | min' kubesec-output.json)
+            if [ "$MIN_SCORE" -lt 0 ]; then
+              echo "Error: Configuración de seguridad YAML no válida (Score: $MIN_SCORE). Abortando el despliegue."
+              exit 1
+            fi
+          else
+            echo "Error: No se pudo evaluar la seguridad con kubesec."
+            exit 1
+          fi
+
+      - name: Sustituir Secrets en los YAML antes de aplicar
+        run: |
+          export ROOT_SECRET=$(echo -n "${{ secrets.ROOT_SECRET }}" | base64)
+          export USER_SECRET=$(echo -n "${{ secrets.USER_SECRET }}" | base64)
+          export PASSWORD_SECRET=$(echo -n "${{ secrets.PASSWORD_SECRET }}" | base64)
+          envsubst < manifests-dvja/secret.yaml > manifests-dvja/secret-final.yaml
+
+      - name: Aplicar los manifests en Kubernetes
+        run: |
+          kubectl apply -f manifests-dvja/ -n training
+
+      - name: Hacer pull de la imagen actualizada de la aplicación
+        run: docker pull ${{ inputs.docker_image }}:run-${{ github.run_number }}.0
+      
+      - name: Actualizar imagen de DVJA en Kubernetes
+        run: |
+          export IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image }}:run-${{ github.run_number }}.0"
+          kubectl set env deployment/dvja IMAGE_NAME=$IMAGE_NAME -n training
+          kubectl set image deployment/dvja dvja=$IMAGE_NAME -n training
+          kubectl rollout status deployment/dvja -n training
+          
+      - name: Esperar a que la aplicación esté completamente desplegada
+        run: |
+          max_attempts=20
+          count=1
+          until kubectl get pods -n training | grep dvja | grep "1/1" | grep "Running"; do
+            if [ $count -gt $max_attempts ]; then
+              echo "La aplicación no se encuentra en estado Running tras $((max_attempts*5)) segundos. Abortando."
+              exit 1
+            fi
+            echo "Intento $count: La aplicación aún no está completamente desplegada, esperando 5 segundos..."
+            count=$((count+1))
+            sleep 5
+          done
+          echo "DVJA está completamente desplegado."
+
+      - name: Configurar Port Forwarding para DVJA en segundo plano
+        run: |
+          nohup kubectl port-forward -n training svc/dvja 7070:80 > dvja-portforward.log 2>&1 &
+        
   scanZap:
     needs: [deploy,setupDefectDojo]
     runs-on: self-hosted  
