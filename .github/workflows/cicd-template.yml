@@ -263,7 +263,7 @@ jobs:
           mkdir -p $HOME/bin
           mv kubeval $HOME/bin/
           export PATH=$HOME/bin:$PATH
-          kubeval -d manifests-${{ inputs-project_name }}/ || { echo "Error: YAML no válido. Abortando el despliegue."; exit 1; }
+          kubeval -d manifests-${{ inputs.project_name }}/ || { echo "Error: YAML no válido. Abortando el despliegue."; exit 1; }
 
       - name: Validar seguridad de YAML con kubesec
         run: |
