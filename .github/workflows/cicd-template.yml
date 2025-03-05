@@ -334,8 +334,11 @@ jobs:
           done
           echo "Aplicación completamente desplegada."
 
-      - name: Configurar Port Forwarding para la Aplicación en segundo plano
-        run: nohup kubectl port-forward -n training svc/dvja 7070:8080 > port-forward.log 2>&1 &
+      - name: Configurar Port Forwarding
+        run: |
+          nohup kubectl port-forward -n training svc/dvja 7070:80 > port-forward.log 2>&1 &
+          sleep 5
+          ps aux | grep '[k]ubectl port-forward' || { echo "El proceso de port-forward no está corriendo"; exit 1; }
         
   scanZap:
     needs: [deploy,setupDefectDojo]
