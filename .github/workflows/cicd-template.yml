@@ -250,7 +250,7 @@ jobs:
     
       - name: Checkout del Repositorio
         uses: actions/checkout@v3
-        
+
       - name: Configurar kubectl
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
@@ -287,6 +287,16 @@ jobs:
       
       - name: Hacer pull de la imagen actualizada de la aplicación
         run: docker pull ${{ inputs.docker_image }}:run-${{ github.run_number }}.0
+
+      - name: Verificar si Kubernetes está corriendo
+        run: |
+          if kubectl cluster-info > /dev/null 2>&1; then
+            echo "El clúster de Kubernetes ya está en ejecución."
+          else
+            echo "El clúster de Kubernetes no está corriendo. Iniciándolo..."
+            minikube start --driver=docker
+            echo "Minikube iniciado con éxito."
+          fi
 
       - name: Sustituir valores en secret.yaml antes de aplicar
         run: |
