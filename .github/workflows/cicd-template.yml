@@ -303,8 +303,8 @@ jobs:
           kubectl apply -f manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}-final.yaml -n training
           
       - name: Aplicar los manifests en Kubernetes
-        run: |
-          kubectl apply -f manifests-${{ inputs.project_name }}/nochanges/ -n training  
+        run: kubectl apply -f manifests-${{ inputs.project_name }}/nochanges -n training  
+        working-directory: ${{ github.workspace }}
       
       - name: Actualizar imagen del proyecto en Kubernetes
         run: kubectl rollout status deployment/${{ inputs.project_name }} -n training
