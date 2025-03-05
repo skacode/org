@@ -336,7 +336,7 @@ jobs:
 
       - name: Configurar Port Forwarding para la Aplicación en segundo plano
         run: |
-          nohup kubectl port-forward -n training svc/${{ inputs.projectname }} 7070:80 > {{ inputs.projectname }}-portforward.log 2>&1 &
+          nohup kubectl port-forward -n training svc/${{ inputs.projectname }} 7070:8080 > {{ inputs.projectname }}-portforward.log 2>&1 &
         
   scanZap:
     needs: [deploy,setupDefectDojo]
