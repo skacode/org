@@ -298,7 +298,7 @@ jobs:
 
       - name: Sustituir valores en deployment-project.yaml antes de aplicar
         run: |
-          export IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.docker_image }}:run-${{ github.run_number }}.0"
+          export IMAGE_NAME="${{ inputs.docker_image }}:run-${{ github.run_number }}.0"
           envsubst < manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}.yaml > manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}-final.yaml
           kubectl apply -f manifests-${{ inputs.project_name }}/deployment-${{ inputs.project_name }}-final.yaml -n training
           
