@@ -343,6 +343,13 @@ jobs:
     runs-on: self-hosted  
     if: success()
     steps:
+      - name: Checkout repositorio org
+        uses: actions/checkout@v3
+        with:
+          repository: skacode/org
+          ref: main
+          path: org
+
       - name: Esperar a que la aplicación esté disponible
         run: |
           max_attempts=24
