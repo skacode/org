@@ -336,9 +336,9 @@ jobs:
 
       - name: Start Port Forwarding
         run: |
-          screen -dmS portforward kubectl port-forward -n training svc/dvja 7070:8080
+          tmux new-session -d -s portforward "kubectl port-forward -n training svc/dvja 7070:8080"
           sleep 5
-          screen -ls | grep portforward || { echo "El proceso de port-forward no está corriendo"; exit 1; }
+          tmux ls | grep portforward || { echo "El proceso de port-forward no está corriendo"; exit 1; }
         shell: bash
         
   scanZap:
@@ -382,7 +382,7 @@ jobs:
           python-version: '3.x'
 
       - name: Stop Port Forwarding
-        run: screen -S portforward -X quit
+        run: tmux kill-session -t portforward || echo "No hay sesión activa de port-forward"
         shell: bash
         
       - name: Upload OWASP ZAP Report to DefectDojo
