@@ -334,11 +334,12 @@ jobs:
           done
           echo "Aplicación completamente desplegada."
 
-      - name: Configurar Port Forwarding
+      - name: Start Port Forwarding
         run: |
-          nohup kubectl port-forward -n training svc/dvja 7070:8080 > port-forward.log 2>&1 &
+          screen -dmS portforward kubectl port-forward -n training svc/dvja 7070:8080
           sleep 5
-          ps aux | grep '[k]ubectl port-forward' || { echo "El proceso de port-forward no está corriendo"; exit 1; }
+          screen -ls | grep portforward || { echo "El proceso de port-forward no está corriendo"; exit 1; }
+        shell: bash
         
   scanZap:
     needs: [deploy,setupDefectDojo]
@@ -379,6 +380,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+
+      - name: Stop Port Forwarding
+        run: screen -S portforward -X quit
+        shell: bash
         
       - name: Upload OWASP ZAP Report to DefectDojo
         if: success()
