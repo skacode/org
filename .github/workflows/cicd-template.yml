@@ -333,13 +333,6 @@ jobs:
             sleep 5
           done
           echo "Aplicación completamente desplegada."
-
-      - name: Start Port Forwarding
-        run: |
-          tmux new-session -d -s portforward "kubectl port-forward -n training svc/dvja 7070:8080"
-          sleep 5
-          tmux ls | grep portforward || { echo "El proceso de port-forward no está corriendo"; exit 1; }
-        shell: bash
         
   scanZap:
     needs: [deploy,setupDefectDojo]
@@ -352,6 +345,14 @@ jobs:
           repository: skacode/org
           ref: main
           path: org
+
+      - name: Start Port Forwarding
+        run: |
+          nohup kubectl port-forward -n training svc/dvja 7070:8080 > port-forward.log 2>&1 & 
+          echo $! > port-forward.pid 
+          sleep 5 
+          ps -p $(cat port-forward.pid) > /dev/null || { echo "El proceso de port-forward no está corriendo"; exit 1; }
+        shell: bash
 
       - name: Esperar a que la aplicación esté disponible
         run: |
@@ -382,7 +383,9 @@ jobs:
           python-version: '3.x'
 
       - name: Stop Port Forwarding
-        run: tmux kill-session -t portforward || echo "No hay sesión activa de port-forward"
+        run: |
+            kill $(cat port-forward.pid)
+            rm -f port-forward.pid
         shell: bash
         
       - name: Upload OWASP ZAP Report to DefectDojo
