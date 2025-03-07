@@ -56,7 +56,7 @@ def main():
     product_count = product_data.get("count", 0)
     if product_count == 0:
         print("Producto no encontrado. Creando...")
-        create_product_url = f"{api_url}/products/"
+        create_product_url = f"{linea[0]}/products/"
         product_payload = {
             "name": project_name,
             "prod_type": 1,
@@ -70,14 +70,14 @@ def main():
         product_id = product_data.get("results", [{}])[0].get("id")
         print(f"Producto encontrado con ID: {product_id}")
     print("Verificando si existe engagement para el producto...")
-    get_engagement_url = f"{api_url}/engagements/?product={product_id}"
+    get_engagement_url = f"{linea[0]}/engagements/?product={product_id}"
     engagement_response = requests.get(get_engagement_url, headers=headers)
     engagement_response.raise_for_status()
     engagement_data = engagement_response.json()
     engagement_count = engagement_data.get("count", 0)
     if engagement_count == 0:
         print("Engagement no encontrado. Creando...")
-        create_engagement_url = f"{api_url}/engagements/"
+        create_engagement_url = f"{linea[0]}/engagements/"
         engagement_payload = {
             "product": product_id,
             "name": "CI/CD Engagement",
