@@ -45,7 +45,7 @@ def main():
     project_name = os.environ.get("INPUT_PROJECT_NAME")
     lista = check_and_start_defectdojo(os.environ.get("API_URL", "http://localhost:9090/api/v2"),os.environ.get("DEFECTDOJO_API_KEY"))
     headers = {
-        "Authorization": f"Token {lista[0]}",
+        "Authorization": f"Token {lista[1]}",
         "Content-Type": "application/json"
     }
     print(f"Verificando si el producto '{project_name}' existe...")
