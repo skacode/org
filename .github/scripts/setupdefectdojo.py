@@ -39,19 +39,17 @@ def check_and_start_defectdojo(api_url,api_key):
         except Exception as e:
             print("DefectDojo sigue sin estar disponible:", e)
             sys.exit(1)
+    return [api_url,api_key]
 
 def main():
     project_name = os.environ.get("INPUT_PROJECT_NAME")
-    if not project_name or not api_key:
-        print("Error: se deben definir INPUT_PROJECT_NAME y DEFECTDOJO_API_KEY en las variables de entorno.")
-        sys.exit(1)
-    check_and_start_defectdojo(os.environ.get("API_URL", "http://localhost:9090/api/v2"),os.environ.get("DEFECTDOJO_API_KEY"))
+    lista = check_and_start_defectdojo(os.environ.get("API_URL", "http://localhost:9090/api/v2"),os.environ.get("DEFECTDOJO_API_KEY"))
     headers = {
-        "Authorization": f"Token {api_key}",
+        "Authorization": f"Token {lista[0]}",
         "Content-Type": "application/json"
     }
     print(f"Verificando si el producto '{project_name}' existe...")
-    get_product_url = f"{api_url}/products/?name={project_name}"
+    get_product_url = f"{lista[0]}/products/?name={project_name}"
     product_response = requests.get(get_product_url, headers=headers)
     product_response.raise_for_status()
     product_data = product_response.json()
