@@ -316,7 +316,7 @@ jobs:
         run: kubectl apply -f manifests-${{ inputs.project_name }}/nochanges -n training  
         working-directory: ${{ github.workspace }}
       
-      - name: Actualizar imagen del proyecto en Kubernetes
+      - name: Rollout del proyecto en Kubernetes
         run: kubectl rollout status deployment/${{ inputs.project_name }} -n training
           
       - name: Esperar a que la aplicación esté completamente desplegada
@@ -348,10 +348,11 @@ jobs:
 
       - name: Start Port Forwarding
         run: |
-          nohup kubectl port-forward -n training svc/dvja 7070:8080 > port-forward.log 2>&1 & 
-          echo $! > port-forward.pid 
-          sleep 5 
-          ps -p $(cat port-forward.pid) > /dev/null || { echo "El proceso de port-forward no está corriendo"; exit 1; }
+          setsid kubectl port-forward -n training svc/dvja 7070:8080 > port-forward.log 2>&1 &
+          sleep 2 
+          echo $(pgrep -f "kubectl port-forward") > port-forward.pid
+          cat port-forward.pid
+          pgrep -f "kubectl port-forward" > /dev/null || { echo "El proceso de port-forward no está corriendo"; exit 1; }
         shell: bash
 
       - name: Esperar a que la aplicación esté disponible
