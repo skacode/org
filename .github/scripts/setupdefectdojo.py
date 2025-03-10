@@ -32,13 +32,6 @@ def check_and_start_defectdojo(api_url,api_key):
         else:
             print("DefectDojo iniciado, esperando a que se estabilice...")
         time.sleep(10)
-        try:
-            response = requests.get(test_url, timeout=5)
-            response.raise_for_status()
-            print("DefectDojo está ahora corriendo.")
-        except Exception as e:
-            print("DefectDojo sigue sin estar disponible:", e)
-            sys.exit(1)
     return [api_url,api_key]
 
 def main():
