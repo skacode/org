@@ -258,20 +258,30 @@ jobs:
 
       - name: Validar YAMLs con kubeval
         run: |
-          curl -sSL -o kubeval.tar.gz https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
-          tar -xvf kubeval.tar.gz
-          mkdir -p $HOME/bin
-          mv kubeval $HOME/bin/
-          export PATH=$HOME/bin:$PATH
+          if ! command -v kubeval &> /dev/null; then
+            echo "kubeval no encontrado. Instalando..."
+            curl -sSL -o kubeval.tar.gz https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+            tar -xvf kubeval.tar.gz
+            mkdir -p $HOME/bin
+            mv kubeval $HOME/bin/
+            export PATH=$HOME/bin:$PATH
+          else
+            echo "kubeval ya está instalado."
+          fi
           kubeval -d manifests-${{ inputs.project_name }}/ || { echo "Error: YAML no válido. Abortando el despliegue."; exit 1; }
 
       - name: Validar seguridad de YAML con kubesec
         run: |
-          curl -sSL -o kubesec.tar.gz https://github.com/controlplaneio/kubesec/releases/download/v2.14.2/kubesec_linux_amd64.tar.gz
-          tar -xvf kubesec.tar.gz
-          chmod +x kubesec
-          mv kubesec $HOME/bin/
-          export PATH=$HOME/bin:$PATH
+          if ! command -v kubesec &> /dev/null; then
+            echo "kubesec no encontrado. Instalando..."
+            curl -sSL -o kubesec.tar.gz https://github.com/controlplaneio/kubesec/releases/download/v2.14.2/kubesec_linux_amd64.tar.gz
+            tar -xvf kubesec.tar.gz
+            chmod +x kubesec
+            mv kubesec $HOME/bin/
+            export PATH=$HOME/bin:$PATH
+          else
+            echo "kubesec ya está instalado."
+          fi
           kubesec scan manifests-${{ inputs.project_name }}/*.yaml | tee kubesec-output.json
           
           if grep -q '"score": [0-9]\+' kubesec-output.json; then
