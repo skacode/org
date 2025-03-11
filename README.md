@@ -144,12 +144,13 @@ Ver en https://github.com/skacode/org/blob/main/.github/scripts/uploadtodojo.py
 **Solución:** Se puede hacer de varias maneras, se puede usar el reimport-scan de Dojo pero nosotros hemos utilizado una manera más sencilla y es activando la opción de deduplication y delete duplicates en Dojo.
 ![image](https://github.com/user-attachments/assets/ae40ee9a-bab4-439a-92f0-bf7554b9b5dc)
 
-### Problema: Dependencias desactualizadas y mejoras en la configuración de Maven.
-***Solución:*** Se actualizaron los siguientes cambios en el pom.xml:
-  --> Actualización del maven-compiler-plugin de la versión 3.3 a 3.8.1, lo que permite compatibilidad con JDK 1.8.
-  --> Cambio en la configuración de compilación: Ahora source y target están en 1.8 en lugar de 1.7.
-  --> Adición del maven-war-plugin versión 3.4.0 para mejorar la gestión del empaquetado WAR.
-Además en la construcción de la aplicación con Maven usamos la versión de JAVA 1.8 para no tener problemas de incompatibilidades.
+### Problema: Dependencias desactualizadas y mejoras en la configuración de Maven
+**Solución:** Se actualizaron los siguientes cambios en el `pom.xml`:
+- **Actualización del `maven-compiler-plugin`** de la versión `3.3` a `3.8.1`, lo que permite compatibilidad con **JDK 1.8**.
+- **Cambio en la configuración de compilación:** Ahora `source` y `target` están en `1.8` en lugar de `1.7`.
+- **Adición del `maven-war-plugin` versión `3.4.0`** para mejorar la gestión del empaquetado **WAR**.
+Además, en la construcción de la aplicación con **Maven**, usamos la versión de **Java 1.8** para evitar problemas de incompatibilidad.
+
 ```sh
 - name: Construir la aplicación con Maven
   run: |
