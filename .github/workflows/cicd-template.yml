@@ -197,6 +197,8 @@ jobs:
           fi
 
      - name: Iniciar Escaneo Trivy usando cache persistente
+       # no ponemos exit code 1 si encuentra críticas debido a que la demo se hace con una aplicación vulnerable.
+       # lo que haría imposible continuar con la ejecución
        run: |
         docker run --rm \
           -v /var/run/docker.sock:/var/run/docker.sock \
