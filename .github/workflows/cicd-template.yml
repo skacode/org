@@ -253,10 +253,10 @@ jobs:
       - name: Checkout del Repositorio
         uses: actions/checkout@v3
 
-      - name: Configurar kubectl
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
-          export KUBECONFIG=kubeconfig
+      #- name: Configurar kubectl
+        #run: |
+          #echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
+          #export KUBECONFIG=kubeconfig
 
       - name: Validar YAMLs con kubeval
         run: |
