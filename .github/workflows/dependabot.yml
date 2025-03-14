@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Analiza y actualiza dependencias de npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+
+  # Analiza y actualiza imágenes en Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
