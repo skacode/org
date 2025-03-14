@@ -185,7 +185,7 @@ jobs:
        
      - name: Pre-popular DB de Trivy en cache
        run: |
-          if [ ! -f "$HOME/.trivy/trivy.db" ]; then
+          if [ ! -f "home/none/.trivy/trivy.db" ]; then
             echo "No se encontró la base de datos en cache, descargándola..."
             mkdir -p $HOME/.trivy
             docker run --rm \
