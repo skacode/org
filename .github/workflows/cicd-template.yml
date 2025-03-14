@@ -185,15 +185,14 @@ jobs:
        
      - name: Pre-popular DB de Trivy en cache
        run: |
-          if [ ! -f "home/none/.trivy/trivy.db" ]; then
-            echo "No se encontró la base de datos en cache, descargándola..."
+          if [ ! -f "$HOME/.trivy/trivy.db" ]; then
             mkdir -p $HOME/.trivy
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v $HOME/.trivy:/home/agent/.trivy \
               aquasec/trivy image --download-db-only --cache-dir /home/agent/.trivy ${{ inputs.docker_image }}:run-${{ github.run_number }}
           else
-            echo "Base de datos en cache encontrada, usándola."
+            echo "Continuamos..."
           fi
 
      - name: Iniciar Escaneo Trivy usando cache persistente
