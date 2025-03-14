@@ -360,7 +360,7 @@ jobs:
       - name: Start Port Forwarding
         run: |
           setsid kubectl port-forward -n training svc/dvja 7070:8080 > port-forward.log 2>&1 &
-          sleep 2 
+          sleep 5
           echo $(pgrep -f "kubectl port-forward") > port-forward.pid
           cat port-forward.pid
           pgrep -f "kubectl port-forward" > /dev/null || { echo "El proceso de port-forward no está corriendo"; exit 1; }
