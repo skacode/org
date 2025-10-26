@@ -75,8 +75,9 @@ jobs:
           
       - name: Iniciar Dependency-Track si está detenido o crear si no existe
         if: env.running == 'false'
-        run: docker compose up -d
-        working-directory: "/home/none/dt"
+        run: |
+          cd "$HOME/dt"
+          docker compose up -d
  
       - name: Esperar a que Dependency-Track esté operativo
         run: |
