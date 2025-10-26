@@ -24,7 +24,7 @@ def check_and_start_defectdojo(api_url,api_key):
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd="/home/none/django-DefectDojo"
+            cwd=os.path.expanduser("~/django-DefectDojo")
         )
         if result.returncode != 0:
             print("Error al iniciar DefectDojo:", result.stderr.decode())
